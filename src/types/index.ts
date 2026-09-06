@@ -1,3 +1,21 @@
+export interface UserProfile {
+  id: string;
+  user_id?: string;
+  name: string;
+  role: string;
+  team_name: string;
+  avatar_url?: string;
+  color?: string;
+  created_at?: string;
+}
+
+export interface ProfileSeedOptions {
+  includePlayers: boolean;
+  includeMatches: boolean;
+  includePlayerStats: boolean;
+  includeTactics: boolean;
+}
+
 export interface PlayerBaseAttributes {
   pace: number;
   shooting: number;
@@ -9,6 +27,7 @@ export interface PlayerBaseAttributes {
 
 export interface Player {
   id: string;
+  profile_id?: string;
   name: string;
   position: 'GK' | 'DEF' | 'MID' | 'FWD';
   preferred_role: string; // e.g. "Inside Forward", "Deep-lying Playmaker", "Ball-playing Defender", "Sweeper Keeper"
@@ -25,6 +44,7 @@ export interface Player {
 
 export interface Match {
   id: string;
+  profile_id?: string;
   date: string;
   opponent: string;
   venue: 'Home' | 'Away';
@@ -37,6 +57,7 @@ export interface Match {
 
 export interface PlayerMatchStats {
   id: string;
+  profile_id?: string;
   player_id: string;
   match_id: string;
   minutes_played: number;
@@ -64,6 +85,7 @@ export interface PlayerMatchStats {
 
 export interface TeamMatchStats {
   match_id: string;
+  profile_id?: string;
   possession: number; // percentage (0-100)
   shots: number;
   shots_on_target: number;
@@ -76,6 +98,7 @@ export interface TeamMatchStats {
 
 export interface TacticalLayout {
   id: string;
+  profile_id?: string;
   name: string;
   formation: string; // e.g. "4-3-3", "4-2-3-1"
   positions: Record<string, string>; // Map of positionNodeId -> playerId

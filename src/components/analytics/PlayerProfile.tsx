@@ -439,7 +439,7 @@ export default function PlayerProfile({ playerId }: PlayerProfileProps) {
                     </div>
                     <div className="bg-background/40 border border-border p-2.5 rounded-lg flex justify-between items-center col-span-2 md:col-span-1">
                       <span className="text-[10px] text-muted-foreground font-semibold uppercase">Avg Distance</span>
-                      <span className="text-xs font-bold text-white">{avgDistance} km</span>
+                      <span className="text-xs font-bold text-white">{avgDistance} km <span className="text-[10px] text-muted-foreground font-normal">({Math.round(totalDistance * 10) / 10} km)</span></span>
                     </div>
                   </div>
                 </div>

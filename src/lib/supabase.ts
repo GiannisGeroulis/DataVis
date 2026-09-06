@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Player, Match, PlayerMatchStats, TeamMatchStats, TacticalLayout } from '../types';
+import { Player, Match, PlayerMatchStats, TeamMatchStats, TacticalLayout, UserProfile, ProfileSeedOptions } from '../types';
 import { calculateDynamicOVRAndForm } from './ovr-algorithm';
 
 // Import raw JSON data converted from the Excel files
@@ -18,10 +18,8 @@ export const isRealSupabase =
 export const supabase = isRealSupabase ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 // ==========================================
-// DYNAMIC SEEDING FROM PARSED EXCEL DATA
+// SAMPLE DATA DEFINITIONS (FOR OPTIONAL SEEDING)
 // ==========================================
-
-const DB_VERSION = 'v6'; // Trigger migration cache wipe
 
 export const SEED_PLAYERS: Player[] = [
   {
@@ -59,10 +57,9 @@ function parseOpponentAndVenue(matchName: string, teamName: string): { opponent:
 
   if (parts.length === 2) {
     const homeTeam = parts[0].trim();
-    const awayPart = parts[1].trim(); // e.g. "Greece U17 0:1"
+    const awayPart = parts[1].trim();
     const awayTeam = awayPart.split(/\s\d/)[0].trim();
     
-    // Parse score, e.g. "0:1" or "2:3"
     const scoreMatch = matchName.match(/\d+:\d+/);
     const scoreStr = scoreMatch ? scoreMatch[0] : "0:0";
     const [homeScore, oppScoreVal] = scoreStr.split(":").map(Number);
@@ -90,7 +87,6 @@ validTeamRows.forEach(row => {
   const { opponent, venue, ourScore, oppScore } = parseOpponentAndVenue(row.Match, "Greece U17");
   const matchId = `m_${row.Date}_${opponent.replace(/\s+/g, '_')}`;
 
-  // Add Match record (only once per fixture)
   if (!matchIdMap.has(matchId)) {
     matchIdMap.add(matchId);
     parsedMatches.push({
@@ -106,16 +102,13 @@ validTeamRows.forEach(row => {
     });
   }
 
-  // Add TeamMatchStats record
   if (isGreece) {
-    // Clean scheme, e.g. "3-4-3 (80.91%)" -> "3-4-3"
     const schemeClean = row.Scheme ? String(row.Scheme).split(" ")[0].trim() : "4-3-3";
-    
     parsedTeamStats.push({
       match_id: matchId,
       possession: Number(row["Possession, %"] ?? 50),
       shots: Number(row["Shots / on target"] ?? 0),
-      shots_on_target: Number(row[""] ?? 0), // column "" represents shots on target
+      shots_on_target: Number(row[""] ?? 0),
       fouls: 10,
       corners: 5,
       yellow_cards: 1,
@@ -128,13 +121,11 @@ validTeamRows.forEach(row => {
 // 2. Process Player Match Logs (Ioannis Kostoglou stats)
 const validPlayerRows = (rawPlayerStats as any[]).filter(row => row.Date && String(row.Date).match(/^\d{4}-\d{2}-\d{2}$/));
 validPlayerRows.forEach((row, index) => {
-  // Determine if it is a National Team match or a Club match (Borussia Dortmund U17/U19)
   const isNationalTeam = row.Match.includes("Greece U17") || row.Match.includes("Greece U16");
   const teamName = isNationalTeam ? "Greece U17" : "Borussia Dortmund U17";
   const { opponent, venue, ourScore, oppScore } = parseOpponentAndVenue(row.Match, teamName);
   const matchId = `m_${row.Date}_${opponent.replace(/\s+/g, '_')}`;
 
-  // If this match isn't in matches list, add it
   if (!matchIdMap.has(matchId)) {
     matchIdMap.add(matchId);
     parsedMatches.push({
@@ -150,11 +141,9 @@ validPlayerRows.forEach((row, index) => {
     });
   }
 
-  // Map to PlayerMatchStats for I. Kostoglou
   const attemptedPasses = Number(row["Passes / accurate"] ?? 0);
   const accuratePasses = Number(row["_2"] ?? 0);
   const passAccuracy = attemptedPasses > 0 ? Math.round((accuratePasses / attemptedPasses) * 100) : 0;
-  
   const duelsAttempted = Number(row["Duels / won"] ?? 0);
   const duelsWon = Number(row["_6"] ?? 0);
 
@@ -185,7 +174,6 @@ validPlayerRows.forEach((row, index) => {
   });
 });
 
-// Set starting tactical template for Greece U17 (initially only has Kostoglou)
 export const SEED_TACTICAL_LAYOUTS: TacticalLayout[] = [
   {
     id: "l1",
@@ -197,25 +185,24 @@ export const SEED_TACTICAL_LAYOUTS: TacticalLayout[] = [
   }
 ];
 
-// Sort matches chronologically
 parsedMatches.sort((a, b) => a.date.localeCompare(b.date));
 
-// ==========================================
-// DB SERVICE CLIENT WRAPPER (LOCALSTORAGE fallback)
-// ==========================================
-
-const LS_KEYS = {
-  PLAYERS: 'fm_dashboard_players',
-  MATCHES: 'fm_dashboard_matches',
-  PLAYER_STATS: 'fm_dashboard_player_stats',
-  TEAM_STATS: 'fm_dashboard_team_stats',
-  TACTICAL: 'fm_dashboard_tactical_layouts'
+export const SAMPLE_DATASET = {
+  players: SEED_PLAYERS,
+  matches: parsedMatches,
+  playerStats: parsedPlayerStats,
+  teamStats: parsedTeamStats,
+  tacticalLayouts: SEED_TACTICAL_LAYOUTS
 };
 
+// ==========================================
+// STORAGE HELPERS (LOCALSTORAGE FALLBACK)
+// ==========================================
+
 function getLS<T>(key: string, defaultValue: T): T {
-  const raw = localStorage.getItem(key);
-  if (!raw) return defaultValue;
   try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return defaultValue;
     return JSON.parse(raw) as T;
   } catch {
     return defaultValue;
@@ -223,190 +210,464 @@ function getLS<T>(key: string, defaultValue: T): T {
 }
 
 function setLS<T>(key: string, value: T): void {
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.warn("LocalStorage write failed:", e);
+  }
 }
 
-export const dbService = {
-  /**
-   * Initializes the storage. Runs on import.
-   */
-  init: async () => {
-    if (isRealSupabase && supabase) {
-      try {
-        console.log("Supabase connected. Running database checks and seeding...");
-        
-        // 1. Check if database is empty. If so, seed it.
-        const { data: players, error: pErr } = await supabase.from('players').select('id');
-        if (pErr) throw pErr;
-        
-        if (!players || players.length === 0) {
-          console.log("Supabase players empty. Seeding database...");
-          await supabase.from('players').upsert(SEED_PLAYERS);
-          await supabase.from('matches').upsert(parsedMatches);
-          await supabase.from('team_match_stats').upsert(parsedTeamStats);
-          await supabase.from('player_match_stats').upsert(parsedPlayerStats);
-          await supabase.from('tactical_layouts').upsert(SEED_TACTICAL_LAYOUTS);
-          await dbService.recalculateAllPlayerOVRs();
-          console.log("Supabase seeding completed successfully!");
-        } else {
-          // 2. Fix existing matches in Supabase database where is_team_match is false but is_club is false
-          const { data: matches, error: mErr } = await supabase.from('matches').select('*').eq('is_team_match', false).eq('is_club', false);
-          if (mErr) throw mErr;
-          
-          if (matches && matches.length > 0) {
-            console.log(`Found ${matches.length} matches with incorrect is_team_match = false. Updating...`);
-            const updatedMatches = matches.map(m => ({
-              ...m,
-              is_team_match: true
-            }));
-            const { error: uErr } = await supabase.from('matches').upsert(updatedMatches);
-            if (uErr) throw uErr;
-            console.log("Existing matches is_team_match flag successfully updated in Supabase!");
-          }
-        }
-      } catch (err) {
-        console.error("Failed to initialize Supabase database:", err);
-      }
-      return;
-    }
+// Active Profile ID state
+let currentActiveProfileId: string | null = localStorage.getItem('fm_active_profile_id') || null;
 
-    const currentVersion = localStorage.getItem('fm_db_version');
-    if (currentVersion !== DB_VERSION) {
-      localStorage.removeItem(LS_KEYS.PLAYERS);
-      localStorage.removeItem(LS_KEYS.MATCHES);
-      localStorage.removeItem(LS_KEYS.PLAYER_STATS);
-      localStorage.removeItem(LS_KEYS.TEAM_STATS);
-      localStorage.removeItem(LS_KEYS.TACTICAL);
-      localStorage.setItem('fm_db_version', DB_VERSION);
-    }
+// Track if remote Supabase schema supports 'profile_id' column
+let remoteSupportsProfileId: boolean | null = null;
+let remoteSupportsProfilesTable: boolean | null = null;
 
-    const existingPlayers = getLS<Player[]>(LS_KEYS.PLAYERS, []);
-    if (existingPlayers.length === 0) {
-      setLS(LS_KEYS.PLAYERS, SEED_PLAYERS);
-      setLS(LS_KEYS.MATCHES, parsedMatches);
-      setLS(LS_KEYS.TEAM_STATS, parsedTeamStats);
-      setLS(LS_KEYS.PLAYER_STATS, parsedPlayerStats);
-      setLS(LS_KEYS.TACTICAL, SEED_TACTICAL_LAYOUTS);
-      await dbService.recalculateAllPlayerOVRs();
+// ==========================================
+// PROFILE SERVICE
+// ==========================================
+
+export const profileService = {
+  getActiveProfileId: (): string | null => {
+    return currentActiveProfileId || localStorage.getItem('fm_active_profile_id');
+  },
+
+  setActiveProfileId: (id: string | null): void => {
+    currentActiveProfileId = id;
+    if (id) {
+      localStorage.setItem('fm_active_profile_id', id);
+    } else {
+      localStorage.removeItem('fm_active_profile_id');
     }
   },
 
-  /**
-   * Clears database and resets to seed data (now empty)
-   */
-  resetToDefaults: async (): Promise<void> => {
-    if (isRealSupabase && supabase) {
+  getProfiles: async (userId?: string): Promise<UserProfile[]> => {
+    const storageKey = `fm_profiles_${userId || 'guest'}`;
+    const localProfiles = getLS<UserProfile[]>(storageKey, []);
+
+    if (isRealSupabase && supabase && remoteSupportsProfilesTable !== false) {
       try {
-        // Delete all rows in order of foreign key dependency
-        await supabase.from('player_match_stats').delete().neq('id', '');
-        await supabase.from('team_match_stats').delete().neq('match_id', '');
-        await supabase.from('matches').delete().neq('id', '');
-        await supabase.from('players').delete().neq('id', '');
-        await supabase.from('tactical_layouts').delete().neq('id', '');
-        
-        console.log("Supabase database successfully cleared!");
+        let query = supabase.from('profiles').select('*').order('created_at', { ascending: false });
+        if (userId) {
+          query = query.eq('user_id', userId);
+        }
+        const { data, error } = await query;
+        if (error) {
+          if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+            remoteSupportsProfilesTable = false;
+          } else {
+            console.warn("Error fetching Supabase profiles, using local fallback:", error.message);
+          }
+          return localProfiles;
+        }
+        remoteSupportsProfilesTable = true;
+        if (data && data.length > 0) {
+          setLS(storageKey, data);
+          return data as UserProfile[];
+        }
       } catch (err) {
-        console.error("Failed to reset Supabase database:", err);
-        throw err;
+        console.warn("Supabase profiles query error:", err);
       }
+    }
+
+    return localProfiles;
+  },
+
+  createProfile: async (
+    profile: UserProfile, 
+    seedOptions: ProfileSeedOptions = { includePlayers: false, includeMatches: false, includePlayerStats: false, includeTactics: false }
+  ): Promise<UserProfile> => {
+    const profileWithMeta: UserProfile = {
+      ...profile,
+      id: profile.id || `prof_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      created_at: profile.created_at || new Date().toISOString()
+    };
+
+    const storageKey = `fm_profiles_${profile.user_id || 'guest'}`;
+    const existing = getLS<UserProfile[]>(storageKey, []);
+    const updated = [profileWithMeta, ...existing.filter(p => p.id !== profileWithMeta.id)];
+    setLS(storageKey, updated);
+
+    // If Supabase is connected, try to store profile
+    if (isRealSupabase && supabase && remoteSupportsProfilesTable !== false) {
+      try {
+        const { error } = await supabase.from('profiles').upsert(profileWithMeta);
+        if (error) {
+          if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+            remoteSupportsProfilesTable = false;
+          } else {
+            console.warn("Could not insert profile to Supabase (using local):", error.message);
+          }
+        }
+      } catch (err) {
+        console.warn("Supabase createProfile error:", err);
+      }
+    }
+
+    // Set active profile to newly created one
+    profileService.setActiveProfileId(profileWithMeta.id);
+
+    // Perform selective data seeding for this new profile
+    await dbService.seedProfileData(profileWithMeta.id, seedOptions);
+
+    return profileWithMeta;
+  },
+
+  deleteProfile: async (profileId: string, userId?: string): Promise<void> => {
+    const storageKey = `fm_profiles_${userId || 'guest'}`;
+    const existing = getLS<UserProfile[]>(storageKey, []);
+    setLS(storageKey, existing.filter(p => p.id !== profileId));
+
+    // Clear profile-specific data from local storage
+    localStorage.removeItem(`fm_p_${profileId}_players`);
+    localStorage.removeItem(`fm_p_${profileId}_matches`);
+    localStorage.removeItem(`fm_p_${profileId}_player_stats`);
+    localStorage.removeItem(`fm_p_${profileId}_team_stats`);
+    localStorage.removeItem(`fm_p_${profileId}_tactical`);
+
+    if (profileService.getActiveProfileId() === profileId) {
+      profileService.setActiveProfileId(null);
+    }
+
+    if (isRealSupabase && supabase && remoteSupportsProfilesTable !== false) {
+      try {
+        await supabase.from('profiles').delete().eq('id', profileId);
+        if (remoteSupportsProfileId !== false) {
+          await supabase.from('player_match_stats').delete().eq('profile_id', profileId);
+          await supabase.from('team_match_stats').delete().eq('profile_id', profileId);
+          await supabase.from('matches').delete().eq('profile_id', profileId);
+          await supabase.from('players').delete().eq('profile_id', profileId);
+          await supabase.from('tactical_layouts').delete().eq('profile_id', profileId);
+        }
+      } catch (err) {
+        console.warn("Supabase deleteProfile error:", err);
+      }
+    }
+  }
+};
+
+// ==========================================
+// DB SERVICE (SCOPED TO ACTIVE PROFILE)
+// ==========================================
+
+export const dbService = {
+  /**
+   * Helper to get active profile ID, or a fallback default
+   */
+  getProfileScope: (): string => {
+    return profileService.getActiveProfileId() || 'default_profile';
+  },
+
+  /**
+   * Seeds only the specific data items requested by the user for a profile
+   */
+  seedProfileData: async (profileId: string, options: ProfileSeedOptions): Promise<void> => {
+    // If completely blank (all false), write empty datasets
+    if (!options.includePlayers && !options.includeMatches && !options.includePlayerStats && !options.includeTactics) {
+      setLS(`fm_p_${profileId}_players`, []);
+      setLS(`fm_p_${profileId}_matches`, []);
+      setLS(`fm_p_${profileId}_player_stats`, []);
+      setLS(`fm_p_${profileId}_team_stats`, []);
+      setLS(`fm_p_${profileId}_tactical`, []);
       return;
     }
 
-    localStorage.removeItem(LS_KEYS.PLAYERS);
-    localStorage.removeItem(LS_KEYS.MATCHES);
-    localStorage.removeItem(LS_KEYS.TEAM_STATS);
-    localStorage.removeItem(LS_KEYS.PLAYER_STATS);
-    localStorage.removeItem(LS_KEYS.TACTICAL);
-    await dbService.init();
+    // 1. Players
+    if (options.includePlayers) {
+      const playersToSeed = SAMPLE_DATASET.players.map(p => ({
+        ...p,
+        id: `${p.id}_${profileId}`,
+        profile_id: profileId
+      }));
+      setLS(`fm_p_${profileId}_players`, playersToSeed);
+
+      if (isRealSupabase && supabase) {
+        try {
+          const payload = remoteSupportsProfileId === false ? playersToSeed.map(({ profile_id: _, ...c }) => c) : playersToSeed;
+          await supabase.from('players').upsert(payload);
+        } catch (e) {
+          console.warn("Could not seed players to Supabase:", e);
+        }
+      }
+    } else {
+      setLS(`fm_p_${profileId}_players`, []);
+    }
+
+    // 2. Matches
+    if (options.includeMatches) {
+      const matchesToSeed = SAMPLE_DATASET.matches.map(m => ({
+        ...m,
+        id: `${m.id}_${profileId}`,
+        profile_id: profileId
+      }));
+      setLS(`fm_p_${profileId}_matches`, matchesToSeed);
+
+      if (isRealSupabase && supabase) {
+        try {
+          const payload = remoteSupportsProfileId === false ? matchesToSeed.map(({ profile_id: _, ...c }) => c) : matchesToSeed;
+          await supabase.from('matches').upsert(payload);
+        } catch (e) {
+          console.warn("Could not seed matches to Supabase:", e);
+        }
+      }
+    } else {
+      setLS(`fm_p_${profileId}_matches`, []);
+    }
+
+    // 3. Stats (Player & Team)
+    if (options.includePlayerStats && options.includeMatches && options.includePlayers) {
+      const pStatsToSeed = SAMPLE_DATASET.playerStats.map(s => ({
+        ...s,
+        id: `${s.id}_${profileId}`,
+        player_id: `kostoglou_${profileId}`,
+        match_id: `${s.match_id}_${profileId}`,
+        profile_id: profileId
+      }));
+      const tStatsToSeed = SAMPLE_DATASET.teamStats.map(ts => ({
+        ...ts,
+        match_id: `${ts.match_id}_${profileId}`,
+        profile_id: profileId
+      }));
+
+      setLS(`fm_p_${profileId}_player_stats`, pStatsToSeed);
+      setLS(`fm_p_${profileId}_team_stats`, tStatsToSeed);
+
+      if (isRealSupabase && supabase) {
+        try {
+          const pPayload = remoteSupportsProfileId === false ? pStatsToSeed.map(({ profile_id: _, ...c }) => c) : pStatsToSeed;
+          const tPayload = remoteSupportsProfileId === false ? tStatsToSeed.map(({ profile_id: _, ...c }) => c) : tStatsToSeed;
+          await supabase.from('team_match_stats').upsert(tPayload);
+          await supabase.from('player_match_stats').upsert(pPayload);
+        } catch (e) {
+          console.warn("Could not seed stats to Supabase:", e);
+        }
+      }
+    } else {
+      setLS(`fm_p_${profileId}_player_stats`, []);
+      setLS(`fm_p_${profileId}_team_stats`, []);
+    }
+
+    // 4. Tactics
+    if (options.includeTactics) {
+      const tacticalToSeed = SAMPLE_DATASET.tacticalLayouts.map(t => ({
+        ...t,
+        id: `${t.id}_${profileId}`,
+        profile_id: profileId,
+        positions: options.includePlayers ? { "CM": `kostoglou_${profileId}` } : {}
+      }));
+      setLS(`fm_p_${profileId}_tactical`, tacticalToSeed);
+
+      if (isRealSupabase && supabase) {
+        try {
+          const payload = remoteSupportsProfileId === false ? tacticalToSeed.map(({ profile_id: _, ...c }) => c) : tacticalToSeed;
+          await supabase.from('tactical_layouts').upsert(payload);
+        } catch (e) {
+          console.warn("Could not seed tactical to Supabase:", e);
+        }
+      }
+    } else {
+      setLS(`fm_p_${profileId}_tactical`, []);
+    }
+
+    if (options.includePlayers && options.includePlayerStats) {
+      await dbService.recalculateAllPlayerOVRs(profileId);
+    }
+  },
+
+  init: async () => {
+    return;
+  },
+
+  resetToDefaults: async (): Promise<void> => {
+    const profileId = dbService.getProfileScope();
+    localStorage.removeItem(`fm_p_${profileId}_players`);
+    localStorage.removeItem(`fm_p_${profileId}_matches`);
+    localStorage.removeItem(`fm_p_${profileId}_team_stats`);
+    localStorage.removeItem(`fm_p_${profileId}_player_stats`);
+    localStorage.removeItem(`fm_p_${profileId}_tactical`);
+
+    if (isRealSupabase && supabase && remoteSupportsProfileId !== false) {
+      try {
+        await supabase.from('player_match_stats').delete().eq('profile_id', profileId);
+        await supabase.from('team_match_stats').delete().eq('profile_id', profileId);
+        await supabase.from('matches').delete().eq('profile_id', profileId);
+        await supabase.from('players').delete().eq('profile_id', profileId);
+        await supabase.from('tactical_layouts').delete().eq('profile_id', profileId);
+      } catch (err) {
+        console.warn("Reset Supabase failed:", err);
+      }
+    }
   },
 
   // ==========================================
   // PLAYERS API
   // ==========================================
-  getPlayers: async (): Promise<Player[]> => {
-    if (isRealSupabase && supabase) {
-      const { data, error } = await supabase.from('players').select('*');
-      if (error) throw error;
-      return data as Player[];
+  getPlayers: async (profileIdOverride?: string): Promise<Player[]> => {
+    const profileId = profileIdOverride || dbService.getProfileScope();
+
+    if (isRealSupabase && supabase && remoteSupportsProfileId !== false) {
+      try {
+        const { data, error } = await supabase.from('players').select('*').eq('profile_id', profileId);
+        if (error) {
+          if (error.code === 'PGRST204' || error.message?.includes('profile_id')) {
+            remoteSupportsProfileId = false;
+          } else {
+            console.warn("Supabase getPlayers error:", error.message);
+          }
+        } else if (data) {
+          setLS(`fm_p_${profileId}_players`, data);
+          return data as Player[];
+        }
+      } catch (e) {
+        console.warn("Supabase query error:", e);
+      }
     }
-    return getLS<Player[]>(LS_KEYS.PLAYERS, []);
+
+    return getLS<Player[]>(`fm_p_${profileId}_players`, []);
   },
 
   savePlayer: async (player: Player): Promise<void> => {
-    if (isRealSupabase && supabase) {
-      const { error } = await supabase.from('players').upsert(player);
-      if (error) throw error;
-      return;
-    }
-    const players = getLS<Player[]>(LS_KEYS.PLAYERS, []);
-    const idx = players.findIndex(p => p.id === player.id);
+    const profileId = player.profile_id || dbService.getProfileScope();
+    const playerWithScope: Player = { ...player, profile_id: profileId };
+
+    const players = getLS<Player[]>(`fm_p_${profileId}_players`, []);
+    const idx = players.findIndex(p => p.id === playerWithScope.id);
     if (idx >= 0) {
-      players[idx] = player;
+      players[idx] = playerWithScope;
     } else {
-      players.push(player);
+      players.push(playerWithScope);
     }
-    setLS(LS_KEYS.PLAYERS, players);
+    setLS(`fm_p_${profileId}_players`, players);
+
+    if (isRealSupabase && supabase) {
+      try {
+        const payload = remoteSupportsProfileId === false 
+          ? { ...playerWithScope, profile_id: undefined } 
+          : playerWithScope;
+        const { error } = await supabase.from('players').upsert(payload);
+        if (error && (error.code === 'PGRST204' || error.message?.includes('profile_id'))) {
+          remoteSupportsProfileId = false;
+          const { profile_id: _, ...clean } = playerWithScope;
+          await supabase.from('players').upsert(clean);
+        }
+      } catch (err) {
+        console.warn("Supabase savePlayer error:", err);
+      }
+    }
   },
 
   // ==========================================
   // MATCHES API
   // ==========================================
-  getMatches: async (): Promise<Match[]> => {
-    if (isRealSupabase && supabase) {
-      const { data, error } = await supabase.from('matches').select('*').order('date', { ascending: true });
-      if (error) throw error;
-      return data as Match[];
+  getMatches: async (profileIdOverride?: string): Promise<Match[]> => {
+    const profileId = profileIdOverride || dbService.getProfileScope();
+
+    if (isRealSupabase && supabase && remoteSupportsProfileId !== false) {
+      try {
+        const { data, error } = await supabase.from('matches').select('*').eq('profile_id', profileId).order('date', { ascending: true });
+        if (error) {
+          if (error.code === 'PGRST204' || error.message?.includes('profile_id')) {
+            remoteSupportsProfileId = false;
+          }
+        } else if (data) {
+          setLS(`fm_p_${profileId}_matches`, data);
+          return data as Match[];
+        }
+      } catch (e) {
+        console.warn("Supabase getMatches error:", e);
+      }
     }
-    return getLS<Match[]>(LS_KEYS.MATCHES, []).sort((a, b) => a.date.localeCompare(b.date));
+
+    return getLS<Match[]>(`fm_p_${profileId}_matches`, []).sort((a, b) => a.date.localeCompare(b.date));
   },
 
   saveMatch: async (match: Match): Promise<void> => {
-    if (isRealSupabase && supabase) {
-      const { error } = await supabase.from('matches').upsert(match);
-      if (error) throw error;
-      return;
-    }
-    const matches = getLS<Match[]>(LS_KEYS.MATCHES, []);
-    const idx = matches.findIndex(m => m.id === match.id);
+    const profileId = match.profile_id || dbService.getProfileScope();
+    const matchWithScope: Match = { ...match, profile_id: profileId };
+
+    const matches = getLS<Match[]>(`fm_p_${profileId}_matches`, []);
+    const idx = matches.findIndex(m => m.id === matchWithScope.id);
     if (idx >= 0) {
-      matches[idx] = match;
+      matches[idx] = matchWithScope;
     } else {
-      matches.push(match);
+      matches.push(matchWithScope);
     }
-    setLS(LS_KEYS.MATCHES, matches);
+    setLS(`fm_p_${profileId}_matches`, matches);
+
+    if (isRealSupabase && supabase) {
+      try {
+        const payload = remoteSupportsProfileId === false ? { ...matchWithScope, profile_id: undefined } : matchWithScope;
+        const { error } = await supabase.from('matches').upsert(payload);
+        if (error && (error.code === 'PGRST204' || error.message?.includes('profile_id'))) {
+          remoteSupportsProfileId = false;
+          const { profile_id: _, ...clean } = matchWithScope;
+          await supabase.from('matches').upsert(clean);
+        }
+      } catch (err) {
+        console.warn("Supabase saveMatch error:", err);
+      }
+    }
   },
 
   // ==========================================
   // PLAYER STATS API
   // ==========================================
   getPlayerMatchStats: async (playerId: string): Promise<PlayerMatchStats[]> => {
-    if (isRealSupabase && supabase) {
-      const { data, error } = await supabase.from('player_match_stats').select('*').eq('player_id', playerId);
-      if (error) throw error;
-      return data as PlayerMatchStats[];
+    const profileId = dbService.getProfileScope();
+
+    if (isRealSupabase && supabase && remoteSupportsProfileId !== false) {
+      try {
+        const { data, error } = await supabase.from('player_match_stats')
+          .select('*')
+          .eq('player_id', playerId)
+          .eq('profile_id', profileId);
+        if (error) {
+          if (error.code === 'PGRST204' || error.message?.includes('profile_id')) {
+            remoteSupportsProfileId = false;
+          }
+        } else if (data) {
+          return data as PlayerMatchStats[];
+        }
+      } catch (e) {
+        console.warn("Supabase getPlayerMatchStats error:", e);
+      }
     }
-    const allStats = getLS<PlayerMatchStats[]>(LS_KEYS.PLAYER_STATS, []);
+
+    const allStats = getLS<PlayerMatchStats[]>(`fm_p_${profileId}_player_stats`, []);
     return allStats.filter(s => s.player_id === playerId);
   },
 
   getAllPlayerMatchStats: async (): Promise<PlayerMatchStats[]> => {
-    if (isRealSupabase && supabase) {
-      const { data, error } = await supabase.from('player_match_stats').select('*');
-      if (error) throw error;
-      return data as PlayerMatchStats[];
+    const profileId = dbService.getProfileScope();
+
+    if (isRealSupabase && supabase && remoteSupportsProfileId !== false) {
+      try {
+        const { data, error } = await supabase.from('player_match_stats')
+          .select('*')
+          .eq('profile_id', profileId);
+        if (error) {
+          if (error.code === 'PGRST204' || error.message?.includes('profile_id')) {
+            remoteSupportsProfileId = false;
+          }
+        } else if (data) {
+          setLS(`fm_p_${profileId}_player_stats`, data);
+          return data as PlayerMatchStats[];
+        }
+      } catch (e) {
+        console.warn("Supabase getAllPlayerMatchStats error:", e);
+      }
     }
-    return getLS<PlayerMatchStats[]>(LS_KEYS.PLAYER_STATS, []);
+
+    return getLS<PlayerMatchStats[]>(`fm_p_${profileId}_player_stats`, []);
   },
 
   savePlayerMatchStats: async (stats: PlayerMatchStats[]): Promise<void> => {
-    if (isRealSupabase && supabase) {
-      const { error } = await supabase.from('player_match_stats').upsert(stats);
-      if (error) throw error;
-      await dbService.recalculateAllPlayerOVRs();
-      return;
-    }
-    const allStats = getLS<PlayerMatchStats[]>(LS_KEYS.PLAYER_STATS, []);
-    stats.forEach(newStat => {
+    const profileId = dbService.getProfileScope();
+    const statsWithScope = stats.map(s => ({ ...s, profile_id: s.profile_id || profileId }));
+
+    const allStats = getLS<PlayerMatchStats[]>(`fm_p_${profileId}_player_stats`, []);
+    statsWithScope.forEach(newStat => {
       const idx = allStats.findIndex(s => s.id === newStat.id || (s.player_id === newStat.player_id && s.match_id === newStat.match_id));
       if (idx >= 0) {
         allStats[idx] = { ...allStats[idx], ...newStat };
@@ -414,101 +675,126 @@ export const dbService = {
         allStats.push(newStat);
       }
     });
-    setLS(LS_KEYS.PLAYER_STATS, allStats);
-    await dbService.recalculateAllPlayerOVRs();
+    setLS(`fm_p_${profileId}_player_stats`, allStats);
+
+    if (isRealSupabase && supabase) {
+      try {
+        const payload = remoteSupportsProfileId === false 
+          ? statsWithScope.map(({ profile_id: _, ...s }) => s)
+          : statsWithScope;
+        await supabase.from('player_match_stats').upsert(payload);
+      } catch (e) {
+        console.warn("Supabase savePlayerMatchStats error:", e);
+      }
+    }
+
+    await dbService.recalculateAllPlayerOVRs(profileId);
   },
 
   // ==========================================
   // TEAM STATS API
   // ==========================================
   getTeamMatchStats: async (): Promise<TeamMatchStats[]> => {
-    if (isRealSupabase && supabase) {
-      const { data, error } = await supabase.from('team_match_stats').select('*');
-      if (error) throw error;
-      return data as TeamMatchStats[];
+    const profileId = dbService.getProfileScope();
+
+    if (isRealSupabase && supabase && remoteSupportsProfileId !== false) {
+      try {
+        const { data, error } = await supabase.from('team_match_stats').select('*').eq('profile_id', profileId);
+        if (error) {
+          if (error.code === 'PGRST204' || error.message?.includes('profile_id')) {
+            remoteSupportsProfileId = false;
+          }
+        } else if (data) {
+          setLS(`fm_p_${profileId}_team_stats`, data);
+          return data as TeamMatchStats[];
+        }
+      } catch (e) {
+        console.warn("Supabase getTeamMatchStats error:", e);
+      }
     }
-    return getLS<TeamMatchStats[]>(LS_KEYS.TEAM_STATS, []);
+
+    return getLS<TeamMatchStats[]>(`fm_p_${profileId}_team_stats`, []);
   },
 
   saveTeamMatchStats: async (stats: TeamMatchStats): Promise<void> => {
-    if (isRealSupabase && supabase) {
-      const { error } = await supabase.from('team_match_stats').upsert(stats);
-      if (error) throw error;
-      return;
-    }
-    const teamStats = getLS<TeamMatchStats[]>(LS_KEYS.TEAM_STATS, []);
-    const idx = teamStats.findIndex(ts => ts.match_id === stats.match_id);
+    const profileId = stats.profile_id || dbService.getProfileScope();
+    const statsWithScope: TeamMatchStats = { ...stats, profile_id: profileId };
+
+    const teamStats = getLS<TeamMatchStats[]>(`fm_p_${profileId}_team_stats`, []);
+    const idx = teamStats.findIndex(ts => ts.match_id === statsWithScope.match_id);
     if (idx >= 0) {
-      teamStats[idx] = stats;
+      teamStats[idx] = statsWithScope;
     } else {
-      teamStats.push(stats);
+      teamStats.push(statsWithScope);
     }
-    setLS(LS_KEYS.TEAM_STATS, teamStats);
+    setLS(`fm_p_${profileId}_team_stats`, teamStats);
+
+    if (isRealSupabase && supabase) {
+      try {
+        const payload = remoteSupportsProfileId === false ? { ...statsWithScope, profile_id: undefined } : statsWithScope;
+        await supabase.from('team_match_stats').upsert(payload);
+      } catch (e) {
+        console.warn("Supabase saveTeamMatchStats error:", e);
+      }
+    }
   },
 
   // ==========================================
   // TACTICAL LAYOUTS API
   // ==========================================
   getTacticalLayouts: async (): Promise<TacticalLayout[]> => {
-    if (isRealSupabase && supabase) {
-      const { data, error } = await supabase.from('tactical_layouts').select('*');
-      if (error) throw error;
-      return data as TacticalLayout[];
+    const profileId = dbService.getProfileScope();
+
+    if (isRealSupabase && supabase && remoteSupportsProfileId !== false) {
+      try {
+        const { data, error } = await supabase.from('tactical_layouts').select('*').eq('profile_id', profileId);
+        if (error) {
+          if (error.code === 'PGRST204' || error.message?.includes('profile_id')) {
+            remoteSupportsProfileId = false;
+          }
+        } else if (data) {
+          setLS(`fm_p_${profileId}_tactical`, data);
+          return data as TacticalLayout[];
+        }
+      } catch (e) {
+        console.warn("Supabase getTacticalLayouts error:", e);
+      }
     }
-    return getLS<TacticalLayout[]>(LS_KEYS.TACTICAL, []);
+
+    return getLS<TacticalLayout[]>(`fm_p_${profileId}_tactical`, []);
   },
 
   saveTacticalLayout: async (layout: TacticalLayout): Promise<void> => {
-    if (isRealSupabase && supabase) {
-      const { error } = await supabase.from('tactical_layouts').upsert(layout);
-      if (error) throw error;
-      return;
-    }
-    const layouts = getLS<TacticalLayout[]>(LS_KEYS.TACTICAL, []);
-    const idx = layouts.findIndex(l => l.id === layout.id);
+    const profileId = layout.profile_id || dbService.getProfileScope();
+    const layoutWithScope: TacticalLayout = { ...layout, profile_id: profileId };
+
+    const layouts = getLS<TacticalLayout[]>(`fm_p_${profileId}_tactical`, []);
+    const idx = layouts.findIndex(l => l.id === layoutWithScope.id);
     if (idx >= 0) {
-      layouts[idx] = layout;
+      layouts[idx] = layoutWithScope;
     } else {
-      layouts.push(layout);
+      layouts.push(layoutWithScope);
     }
-    setLS(LS_KEYS.TACTICAL, layouts);
+    setLS(`fm_p_${profileId}_tactical`, layouts);
+
+    if (isRealSupabase && supabase) {
+      try {
+        const payload = remoteSupportsProfileId === false ? { ...layoutWithScope, profile_id: undefined } : layoutWithScope;
+        await supabase.from('tactical_layouts').upsert(payload);
+      } catch (e) {
+        console.warn("Supabase saveTacticalLayout error:", e);
+      }
+    }
   },
 
   // ==========================================
   // OVR AND RE-CALCULATION UTILITIES
   // ==========================================
-  recalculateAllPlayerOVRs: async (): Promise<void> => {
-    if (isRealSupabase && supabase) {
-      try {
-        const { data: players, error: pErr } = await supabase.from('players').select('*');
-        if (pErr) throw pErr;
-        const { data: stats, error: sErr } = await supabase.from('player_match_stats').select('*');
-        if (sErr) throw sErr;
-        const { data: matches, error: mErr } = await supabase.from('matches').select('*');
-        if (mErr) throw mErr;
-
-        const matchesList = (matches as Match[] || []);
-
-        for (const p of (players as Player[])) {
-          const playerStats = (stats as PlayerMatchStats[]).filter(s => s.player_id === p.id);
-          playerStats.sort((a, b) => {
-            const dateA = matchesList.find(m => m.id === a.match_id)?.date || '';
-            const dateB = matchesList.find(m => m.id === b.match_id)?.date || '';
-            return dateA.localeCompare(dateB);
-          });
-          const updates = calculateDynamicOVRAndForm(p, playerStats);
-          const updatedPlayer = { ...p, ...updates };
-          await dbService.savePlayer(updatedPlayer);
-        }
-      } catch (err) {
-        console.error("Failed to recalculate player OVR ratings:", err);
-      }
-      return;
-    }
-
-    const players = getLS<Player[]>(LS_KEYS.PLAYERS, []);
-    const stats = getLS<PlayerMatchStats[]>(LS_KEYS.PLAYER_STATS, []);
-    const matches = getLS<Match[]>(LS_KEYS.MATCHES, []);
+  recalculateAllPlayerOVRs: async (profileIdParam?: string): Promise<void> => {
+    const profileId = profileIdParam || dbService.getProfileScope();
+    const players = await dbService.getPlayers(profileId);
+    const stats = getLS<PlayerMatchStats[]>(`fm_p_${profileId}_player_stats`, []);
+    const matches = await dbService.getMatches(profileId);
 
     const updatedPlayers = players.map(p => {
       const playerStats = stats.filter(s => s.player_id === p.id);
@@ -526,9 +812,13 @@ export const dbService = {
       };
     });
 
-    setLS(LS_KEYS.PLAYERS, updatedPlayers);
+    setLS(`fm_p_${profileId}_players`, updatedPlayers);
+    if (isRealSupabase && supabase && remoteSupportsProfileId !== false) {
+      try {
+        await supabase.from('players').upsert(updatedPlayers);
+      } catch (e) {
+        console.warn("Supabase recalculateAllPlayerOVRs error:", e);
+      }
+    }
   }
 };
-
-// Initialize seed data if offline
-dbService.init();
