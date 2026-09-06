@@ -164,3 +164,221 @@ DROP POLICY IF EXISTS "Allow public read access" ON public.tactical_layouts;
 DROP POLICY IF EXISTS "Allow public write access" ON public.tactical_layouts;
 CREATE POLICY "Allow public read access" ON public.tactical_layouts FOR SELECT USING (true);
 CREATE POLICY "Allow public write access" ON public.tactical_layouts FOR ALL USING (true) WITH CHECK (true);
+
+-- =======================================================
+-- 7. OPPONENT TEAMS TABLE
+-- =======================================================
+CREATE TABLE IF NOT EXISTS public.opponent_teams (
+    id TEXT PRIMARY KEY,
+    profile_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    logo_url TEXT,
+    country TEXT,
+    league TEXT,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_opponent_teams_profile_id ON public.opponent_teams(profile_id);
+ALTER TABLE public.opponent_teams ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read access" ON public.opponent_teams;
+DROP POLICY IF EXISTS "Allow public write access" ON public.opponent_teams;
+CREATE POLICY "Allow public read access" ON public.opponent_teams FOR SELECT USING (true);
+CREATE POLICY "Allow public write access" ON public.opponent_teams FOR ALL USING (true) WITH CHECK (true);
+
+-- =======================================================
+-- 8. WYSCOUT MATCHES TABLE
+-- =======================================================
+CREATE TABLE IF NOT EXISTS public.wyscout_matches (
+    id TEXT PRIMARY KEY,
+    profile_id TEXT NOT NULL,
+    opponent_team_id TEXT NOT NULL REFERENCES public.opponent_teams(id) ON DELETE CASCADE,
+    date TEXT NOT NULL,
+    match_name TEXT NOT NULL,
+    competition TEXT,
+    duration INTEGER DEFAULT 90,
+    scheme TEXT DEFAULT '4-3-3',
+    team_analyzed TEXT NOT NULL,
+    goals INTEGER DEFAULT 0,
+    xg NUMERIC DEFAULT 0,
+    shots INTEGER DEFAULT 0,
+    shots_on_target INTEGER DEFAULT 0,
+    shots_on_target_pct NUMERIC DEFAULT 0,
+    passes INTEGER DEFAULT 0,
+    passes_accurate INTEGER DEFAULT 0,
+    passing_accuracy NUMERIC DEFAULT 0,
+    possession NUMERIC DEFAULT 50,
+    losses INTEGER DEFAULT 0,
+    losses_low INTEGER DEFAULT 0,
+    losses_med INTEGER DEFAULT 0,
+    losses_high INTEGER DEFAULT 0,
+    recoveries INTEGER DEFAULT 0,
+    recoveries_low INTEGER DEFAULT 0,
+    recoveries_med INTEGER DEFAULT 0,
+    recoveries_high INTEGER DEFAULT 0,
+    duels INTEGER DEFAULT 0,
+    duels_won INTEGER DEFAULT 0,
+    duels_won_pct NUMERIC DEFAULT 0,
+    opponent_team_name TEXT,
+    opponent_goals INTEGER,
+    opponent_xg NUMERIC,
+    opponent_shots INTEGER,
+    opponent_possession NUMERIC,
+    -- Wyscout Attacking Metrics
+    positional_attacks INTEGER DEFAULT 0,
+    positional_attacks_shots INTEGER DEFAULT 0,
+    positional_attacks_pct NUMERIC DEFAULT 0,
+    counterattacks INTEGER DEFAULT 0,
+    counterattacks_shots INTEGER DEFAULT 0,
+    counterattacks_pct NUMERIC DEFAULT 0,
+    corners INTEGER DEFAULT 0,
+    corners_shots INTEGER DEFAULT 0,
+    corners_shots_pct NUMERIC DEFAULT 0,
+    free_kicks INTEGER DEFAULT 0,
+    free_kicks_shots INTEGER DEFAULT 0,
+    free_kicks_shots_pct NUMERIC DEFAULT 0,
+    penalties INTEGER DEFAULT 0,
+    penalties_converted INTEGER DEFAULT 0,
+    crosses INTEGER DEFAULT 0,
+    crosses_accurate INTEGER DEFAULT 0,
+    crosses_acc_pct NUMERIC DEFAULT 0,
+    offensive_duels INTEGER DEFAULT 0,
+    offensive_duels_won INTEGER DEFAULT 0,
+    offensive_duels_won_pct NUMERIC DEFAULT 0,
+    offsides INTEGER DEFAULT 0,
+    -- Wyscout Defending Metrics
+    conceded_goals INTEGER DEFAULT 0,
+    shots_against INTEGER DEFAULT 0,
+    shots_against_on_target INTEGER DEFAULT 0,
+    shots_against_on_target_pct NUMERIC DEFAULT 0,
+    defensive_duels INTEGER DEFAULT 0,
+    defensive_duels_won INTEGER DEFAULT 0,
+    defensive_duels_won_pct NUMERIC DEFAULT 0,
+    aerial_duels INTEGER DEFAULT 0,
+    aerial_duels_won INTEGER DEFAULT 0,
+    aerial_duels_won_pct NUMERIC DEFAULT 0,
+    sliding_tackles INTEGER DEFAULT 0,
+    sliding_tackles_succ INTEGER DEFAULT 0,
+    sliding_tackles_succ_pct NUMERIC DEFAULT 0,
+    interceptions INTEGER DEFAULT 0,
+    clearances INTEGER DEFAULT 0,
+    fouls INTEGER DEFAULT 0,
+    yellow_cards INTEGER DEFAULT 0,
+    red_cards INTEGER DEFAULT 0,
+    -- Wyscout Passing Metrics
+    forward_passes INTEGER DEFAULT 0,
+    forward_passes_acc INTEGER DEFAULT 0,
+    forward_passes_pct NUMERIC DEFAULT 0,
+    back_passes INTEGER DEFAULT 0,
+    back_passes_acc INTEGER DEFAULT 0,
+    back_passes_pct NUMERIC DEFAULT 0,
+    lateral_passes INTEGER DEFAULT 0,
+    lateral_passes_acc INTEGER DEFAULT 0,
+    lateral_passes_pct NUMERIC DEFAULT 0,
+    long_passes INTEGER DEFAULT 0,
+    long_passes_acc INTEGER DEFAULT 0,
+    long_passes_pct NUMERIC DEFAULT 0,
+    passes_to_final_third INTEGER DEFAULT 0,
+    passes_to_final_third_acc INTEGER DEFAULT 0,
+    passes_to_final_third_pct NUMERIC DEFAULT 0,
+    progressive_passes INTEGER DEFAULT 0,
+    progressive_passes_acc INTEGER DEFAULT 0,
+    progressive_passes_pct NUMERIC DEFAULT 0,
+    smart_passes INTEGER DEFAULT 0,
+    smart_passes_acc INTEGER DEFAULT 0,
+    smart_passes_pct NUMERIC DEFAULT 0,
+    throw_ins INTEGER DEFAULT 0,
+    throw_ins_acc INTEGER DEFAULT 0,
+    goal_kicks INTEGER DEFAULT 0,
+    -- Wyscout Indices & PPDA
+    ppda NUMERIC DEFAULT 0,
+    match_tempo NUMERIC DEFAULT 0,
+    avg_passes_per_possession NUMERIC DEFAULT 0,
+    long_pass_pct NUMERIC DEFAULT 0,
+    avg_shot_distance NUMERIC DEFAULT 0,
+    avg_pass_length NUMERIC DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_wyscout_matches_profile_id ON public.wyscout_matches(profile_id);
+CREATE INDEX IF NOT EXISTS idx_wyscout_matches_team_id ON public.wyscout_matches(opponent_team_id);
+ALTER TABLE public.wyscout_matches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read access" ON public.wyscout_matches;
+DROP POLICY IF EXISTS "Allow public write access" ON public.wyscout_matches;
+CREATE POLICY "Allow public read access" ON public.wyscout_matches FOR SELECT USING (true);
+CREATE POLICY "Allow public write access" ON public.wyscout_matches FOR ALL USING (true) WITH CHECK (true);
+
+-- Migration helpers for existing databases (adds new columns if not present)
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS positional_attacks INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS positional_attacks_shots INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS positional_attacks_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS counterattacks INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS counterattacks_shots INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS counterattacks_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS corners INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS corners_shots INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS corners_shots_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS free_kicks INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS free_kicks_shots INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS free_kicks_shots_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS penalties INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS penalties_converted INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS crosses INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS crosses_accurate INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS crosses_acc_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS offensive_duels INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS offensive_duels_won INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS offensive_duels_won_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS offsides INTEGER DEFAULT 0;
+
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS conceded_goals INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS shots_against INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS shots_against_on_target INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS shots_against_on_target_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS defensive_duels INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS defensive_duels_won INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS defensive_duels_won_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS aerial_duels INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS aerial_duels_won INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS aerial_duels_won_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS sliding_tackles INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS sliding_tackles_succ INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS sliding_tackles_succ_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS interceptions INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS clearances INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS fouls INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS yellow_cards INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS red_cards INTEGER DEFAULT 0;
+
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS forward_passes INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS forward_passes_acc INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS forward_passes_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS back_passes INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS back_passes_acc INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS back_passes_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS lateral_passes INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS lateral_passes_acc INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS lateral_passes_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS long_passes INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS long_passes_acc INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS long_passes_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS passes_to_final_third INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS passes_to_final_third_acc INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS passes_to_final_third_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS progressive_passes INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS progressive_passes_acc INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS progressive_passes_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS smart_passes INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS smart_passes_acc INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS smart_passes_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS throw_ins INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS throw_ins_acc INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS goal_kicks INTEGER DEFAULT 0;
+
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS ppda NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS match_tempo NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS avg_passes_per_possession NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS long_pass_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS avg_shot_distance NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS avg_pass_length NUMERIC DEFAULT 0;
+

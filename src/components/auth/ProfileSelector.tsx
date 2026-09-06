@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { UserProfile, ProfileSeedOptions } from '../../types';
+import { UserProfile } from '../../types';
 import { 
-  Users, 
+  Users,
   Plus, 
   Trash2, 
   ArrowRight, 
@@ -10,8 +10,6 @@ import {
   Flame, 
   Sparkles, 
   Check, 
-  Target, 
-  Activity, 
   Calendar,
   X
 } from 'lucide-react';
@@ -47,43 +45,24 @@ export default function ProfileSelector() {
   const [role, setRole] = useState(PRESET_ROLES[0]);
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
 
-  // Data Loading Mode: 'blank' or 'custom'
-  const [dataMode, setDataMode] = useState<'blank' | 'custom'>('blank');
-  
-  // Granular Seed Checkboxes
-  const [seedOptions, setSeedOptions] = useState<ProfileSeedOptions>({
-    includePlayers: true,
-    includeMatches: true,
-    includePlayerStats: true,
-    includeTactics: true
-  });
-
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profileName.trim()) return;
 
     setCreating(true);
     try {
-      const finalSeedOptions: ProfileSeedOptions = dataMode === 'blank' 
-        ? { includePlayers: false, includeMatches: false, includePlayerStats: false, includeTactics: false }
-        : seedOptions;
-
-      await createProfile(
-        {
-          name: profileName.trim(),
-          team_name: teamName.trim() || 'Custom Team',
-          role: role,
-          color: selectedColor
-        },
-        finalSeedOptions
-      );
+      await createProfile({
+        name: profileName.trim(),
+        team_name: teamName.trim() || 'Custom Team',
+        role: role,
+        color: selectedColor
+      });
 
       setShowModal(false);
       // Reset form
       setProfileName('');
       setTeamName('');
       setRole(PRESET_ROLES[0]);
-      setDataMode('blank');
     } catch (err) {
       console.error("Failed to create profile:", err);
     } finally {
@@ -332,105 +311,6 @@ export default function ProfileSelector() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Data Loading Selection (CRITICAL USER REQUIREMENT) */}
-              <div className="pt-2">
-                <label className="block text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-2">
-                  Επιλογή Αρχικών Δεδομένων (Data Seeding)
-                </label>
-
-                {/* Option Tabs */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setDataMode('blank')}
-                    className={`p-3 rounded-xl border text-left transition ${
-                      dataMode === 'blank'
-                        ? 'border-primary bg-primary/10 text-white'
-                        : 'border-border bg-zinc-900/60 text-zinc-400 hover:border-zinc-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className={`h-2 w-2 rounded-full ${dataMode === 'blank' ? 'bg-primary glow-active' : 'bg-zinc-600'}`}></div>
-                      <span className="text-xs font-bold uppercase text-white">Κενό Προφίλ (Blank)</span>
-                    </div>
-                    <p className="text-[10px] text-zinc-400">
-                      Καθαρός χώρος χωρίς παίκτες ή αγώνες. Έτοιμο για ανέβασμα των δικών σας CSV.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDataMode('custom')}
-                    className={`p-3 rounded-xl border text-left transition ${
-                      dataMode === 'custom'
-                        ? 'border-primary bg-primary/10 text-white'
-                        : 'border-border bg-zinc-900/60 text-zinc-400 hover:border-zinc-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className={`h-2 w-2 rounded-full ${dataMode === 'custom' ? 'bg-primary glow-active' : 'bg-zinc-600'}`}></div>
-                      <span className="text-xs font-bold uppercase text-white">Επιλογή Δεδομένων</span>
-                    </div>
-                    <p className="text-[10px] text-zinc-400">
-                      Φορτώστε μόνο τα δείγματα που επιλέγετε (π.χ. μόνο παίκτες ή τακτικές).
-                    </p>
-                  </button>
-                </div>
-
-                {/* Granular Checkboxes if 'custom' is selected */}
-                {dataMode === 'custom' && (
-                  <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-border space-y-2.5 animate-fade-in">
-                    <p className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-2">
-                      Επιλέξτε τι θέλετε να φορτωθεί:
-                    </p>
-
-                    <label className="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer hover:text-white">
-                      <input
-                        type="checkbox"
-                        checked={seedOptions.includePlayers}
-                        onChange={(e) => setSeedOptions({ ...seedOptions, includePlayers: e.target.checked })}
-                        className="rounded border-zinc-700 text-primary focus:ring-primary h-4 w-4 bg-zinc-800"
-                      />
-                      <Users className="h-3.5 w-3.5 text-primary" />
-                      <span>Δείγμα Παικτών (Ι. Κώστογλου & Βασικά Χαρακτηριστικά)</span>
-                    </label>
-
-                    <label className="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer hover:text-white">
-                      <input
-                        type="checkbox"
-                        checked={seedOptions.includeMatches}
-                        onChange={(e) => setSeedOptions({ ...seedOptions, includeMatches: e.target.checked })}
-                        className="rounded border-zinc-700 text-primary focus:ring-primary h-4 w-4 bg-zinc-800"
-                      />
-                      <Calendar className="h-3.5 w-3.5 text-primary" />
-                      <span>Πρόγραμμα & Αποτελέσματα Αγώνων (Greece U17 fixtures)</span>
-                    </label>
-
-                    <label className="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer hover:text-white">
-                      <input
-                        type="checkbox"
-                        checked={seedOptions.includePlayerStats}
-                        onChange={(e) => setSeedOptions({ ...seedOptions, includePlayerStats: e.target.checked })}
-                        className="rounded border-zinc-700 text-primary focus:ring-primary h-4 w-4 bg-zinc-800"
-                      />
-                      <Activity className="h-3.5 w-3.5 text-primary" />
-                      <span>Στατιστικά Απόδοσης Αγώνων (Passes, Duels, Ratings, xG/xA)</span>
-                    </label>
-
-                    <label className="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer hover:text-white">
-                      <input
-                        type="checkbox"
-                        checked={seedOptions.includeTactics}
-                        onChange={(e) => setSeedOptions({ ...seedOptions, includeTactics: e.target.checked })}
-                        className="rounded border-zinc-700 text-primary focus:ring-primary h-4 w-4 bg-zinc-800"
-                      />
-                      <Target className="h-3.5 w-3.5 text-primary" />
-                      <span>Τακτικά Συστήματα & Διάταξη Γηπέδου (4-3-3 template)</span>
-                    </label>
-                  </div>
-                )}
               </div>
 
               {/* Submit Buttons */}

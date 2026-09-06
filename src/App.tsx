@@ -2,27 +2,21 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthLanding from './components/auth/AuthLanding';
 import ProfileSelector from './components/auth/ProfileSelector';
-import TeamDashboard from './components/analytics/TeamDashboard';
-import TacticalBoard from './components/tactical-board/TacticalBoard';
-import PlayerProfile from './components/analytics/PlayerProfile';
-import CSVUploader from './components/admin/CSVUploader';
+import OpponentGrid from './components/opponents/OpponentGrid';
+import OpponentDetail from './components/opponents/OpponentDetail';
+import { OpponentTeam } from './types';
 import { 
-  LayoutDashboard, 
-  Target, 
-  TrendingUp, 
-  Database, 
+  Shield, 
   Flame, 
   RefreshCw, 
   LogOut, 
-  ShieldCheck 
+  ShieldCheck,
+  FileSpreadsheet
 } from 'lucide-react';
-
-type TabType = 'dashboard' | 'tactics' | 'profile' | 'admin';
 
 function MainWorkspace() {
   const { user, activeProfile, selectProfile, signOut, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
+  const [selectedOpponent, setSelectedOpponent] = useState<OpponentTeam | null>(null);
 
   if (loading) {
     return (
@@ -49,18 +43,6 @@ function MainWorkspace() {
     return <ProfileSelector />;
   }
 
-  const handleNavigateToPlayer = (playerId: string) => {
-    setSelectedPlayerId(playerId);
-    setActiveTab('profile');
-  };
-
-  const navItems = [
-    { id: 'dashboard', label: 'Team Dashboard', icon: LayoutDashboard },
-    { id: 'tactics', label: 'Tactical Board', icon: Target },
-    { id: 'profile', label: 'Player Analytics', icon: TrendingUp },
-    { id: 'admin', label: 'CSV Ingestion', icon: Database },
-  ] as const;
-
   const profileColor = activeProfile.color || '#10b981';
 
   return (
@@ -75,7 +57,7 @@ function MainWorkspace() {
             </div>
             <div>
               <h1 className="font-extrabold text-sm tracking-widest text-white leading-none uppercase">Pitch Analytica</h1>
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1 block">Tactical Suite v2.0</span>
+              <span className="text-[9px] font-bold text-primary uppercase tracking-widest mt-1 block">Wyscout Scouting Suite</span>
             </div>
           </div>
 
@@ -94,7 +76,10 @@ function MainWorkspace() {
               </div>
             </div>
             <button
-              onClick={() => selectProfile(null as any)}
+              onClick={() => {
+                setSelectedOpponent(null);
+                selectProfile(null as any);
+              }}
               title="Αλλαγή Προφίλ"
               className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition flex-shrink-0"
             >
@@ -104,24 +89,31 @@ function MainWorkspace() {
 
           {/* Nav Items */}
           <nav className="space-y-1.5">
-            {navItems.map((item) => {
-              const isActive = activeTab === item.id;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
-                    isActive
-                      ? 'bg-primary text-background shadow-glow-green border border-primary/15'
-                      : 'text-muted-foreground hover:bg-secondary/40 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 flex-shrink-0" />
-                  {item.label}
-                </button>
-              );
-            })}
+            <button
+              onClick={() => setSelectedOpponent(null)}
+              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
+                selectedOpponent === null
+                  ? 'bg-primary text-background shadow-glow-green border border-primary/15'
+                  : 'text-muted-foreground hover:bg-secondary/40 hover:text-white border border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Shield className="h-4 w-4 flex-shrink-0" />
+                <span>Αντίπαλες Ομάδες</span>
+              </div>
+            </button>
+
+            {selectedOpponent && (
+              <div className="pt-2">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 px-4 mb-1 block">
+                  Επιλεγμένη Ομάδα
+                </span>
+                <div className="px-3 py-2 rounded-lg bg-zinc-900/90 border border-primary/30 flex items-center gap-2 text-xs font-bold text-white">
+                  <FileSpreadsheet className="h-4 w-4 text-primary flex-shrink-0" />
+                  <span className="truncate">{selectedOpponent.name}</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
 
@@ -137,12 +129,15 @@ function MainWorkspace() {
                 <span className="text-[9px] text-zinc-400 truncate block mt-0.5">{user.email || 'Analyst'}</span>
               </div>
             </div>
-            <span className="h-2 w-2 rounded-full bg-primary glow-active flex-shrink-0" title="Workspace Active"></span>
+            <span className="h-2 w-2 rounded-full bg-primary glow-active flex-shrink-0" title="Scouting Workspace Active"></span>
           </div>
 
           <div className="flex gap-2 pt-1 border-t border-border/40">
             <button
-              onClick={() => selectProfile(null as any)}
+              onClick={() => {
+                setSelectedOpponent(null);
+                selectProfile(null as any);
+              }}
               className="flex-1 py-1.5 px-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-border text-[10px] font-bold text-zinc-300 hover:text-white transition flex items-center justify-center gap-1"
             >
               <RefreshCw className="h-3 w-3" />
@@ -159,22 +154,18 @@ function MainWorkspace() {
         </div>
       </aside>
 
-      {/* Main Workspace (Keyed by activeProfile.id so profile data isolates completely) */}
+      {/* Main Workspace */}
       <main key={activeProfile.id} className="flex-1 bg-background p-6 md:p-8 overflow-y-auto max-h-screen">
-        {activeTab === 'dashboard' && <TeamDashboard />}
-        
-        {activeTab === 'tactics' && (
-          <TacticalBoard onNavigateToPlayer={handleNavigateToPlayer} />
-        )}
-        
-        {activeTab === 'profile' && (
-          <PlayerProfile 
-            playerId={selectedPlayerId} 
-            onNavigateToPlayer={handleNavigateToPlayer} 
+        {selectedOpponent ? (
+          <OpponentDetail 
+            team={selectedOpponent} 
+            onBack={() => setSelectedOpponent(null)} 
+          />
+        ) : (
+          <OpponentGrid 
+            onSelectTeam={(team) => setSelectedOpponent(team)} 
           />
         )}
-        
-        {activeTab === 'admin' && <CSVUploader />}
       </main>
     </div>
   );
