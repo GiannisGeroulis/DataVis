@@ -30,24 +30,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Helper to load profiles for current user
-  const loadUserProfiles = async (currentUserId?: string) => {
-    const userProfiles = await profileService.getProfiles(currentUserId);
-    setProfiles(userProfiles);
+  // Helper to load account profile directly for the authenticated user
+  const loadUserProfiles = async (currentUserId?: string, userObj?: User | null) => {
+    const uid = currentUserId || userObj?.id || user?.id || 'guest_user';
+    const emailStr = userObj?.email || user?.email || '';
+    const nameStr = userObj?.user_metadata?.name || user?.user_metadata?.name || (emailStr ? emailStr.split('@')[0] : 'Αναλυτής');
 
-    const activeId = profileService.getActiveProfileId();
-    if (activeId) {
-      const match = userProfiles.find(p => p.id === activeId);
-      if (match) {
-        setActiveProfile(match);
-      } else if (userProfiles.length > 0) {
-        // Active profile not found in current user's profiles, reset
-        profileService.setActiveProfileId(null);
-        setActiveProfile(null);
-      }
-    } else {
-      setActiveProfile(null);
-    }
+    const accountProfile: UserProfile = {
+      id: uid,
+      user_id: uid,
+      name: nameStr,
+      role: 'Αναλυτής Τακτικής',
+      team_name: 'DataVis Analytics',
+      color: '#10b981',
+      created_at: new Date().toISOString()
+    };
+
+    setProfiles([accountProfile]);
+    setActiveProfile(accountProfile);
+    profileService.setActiveProfileId(uid);
   };
 
   useEffect(() => {
@@ -61,11 +62,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (isGuest && (!isRealSupabase || !supabase)) {
         const guestUser: any = {
           id: 'guest_user',
-          email: 'coach.guest@pitchanalytica.com',
-          user_metadata: { name: 'Guest Tactical Analyst' }
+          email: 'guest@datavis.com',
+          user_metadata: { name: 'Guest Analyst' }
         };
         setUser(guestUser);
-        await loadUserProfiles('guest_user');
+        await loadUserProfiles('guest_user', guestUser);
         setLoading(false);
         return;
       }
@@ -77,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSession(currentSession);
             setUser(currentSession?.user ?? null);
             if (currentSession?.user) {
-              await loadUserProfiles(currentSession.user.id);
+              await loadUserProfiles(currentSession.user.id, currentSession.user);
             }
           }
         } catch (err: any) {
@@ -89,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(newSession);
           setUser(newSession?.user ?? null);
           if (newSession?.user) {
-            await loadUserProfiles(newSession.user.id);
+            await loadUserProfiles(newSession.user.id, newSession.user);
           } else {
             setProfiles([]);
             setActiveProfile(null);
@@ -109,11 +110,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Supabase not configured: fallback to local guest mode
         const guestUser: any = {
           id: 'guest_user',
-          email: 'analyst@pitchanalytica.local',
+          email: 'analyst@datavis.local',
           user_metadata: { name: 'Local Analyst' }
         };
         setUser(guestUser);
-        await loadUserProfiles('guest_user');
+        await loadUserProfiles('guest_user', guestUser);
         setLoading(false);
       }
     };
@@ -128,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const mockUser: any = { id: 'user_' + btoa(email).slice(0, 8), email };
       setUser(mockUser);
       localStorage.removeItem('fm_is_guest');
-      await loadUserProfiles(mockUser.id);
+      await loadUserProfiles(mockUser.id, mockUser);
       return { success: true };
     }
 
@@ -142,7 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(data.session);
       localStorage.removeItem('fm_is_guest');
       if (data.user) {
-        await loadUserProfiles(data.user.id);
+        await loadUserProfiles(data.user.id, data.user);
       }
       return { success: true };
     } catch (err: any) {
@@ -157,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!isRealSupabase || !supabase) {
       const mockUser: any = { id: 'user_' + btoa(email).slice(0, 8), email };
       setUser(mockUser);
-      await loadUserProfiles(mockUser.id);
+      await loadUserProfiles(mockUser.id, mockUser);
       return { success: true, message: 'Account created successfully (Local mode).' };
     }
 
@@ -179,7 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(data.user);
       setSession(data.session);
       if (data.user) {
-        await loadUserProfiles(data.user.id);
+        await loadUserProfiles(data.user.id, data.user);
       }
       return { success: true };
     } catch (err: any) {
@@ -209,11 +210,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('fm_is_guest', 'true');
     const guestUser: any = {
       id: 'guest_user',
-      email: 'guest.analyst@pitchanalytica.com',
+      email: 'guest@datavis.com',
       user_metadata: { name: 'Guest Analyst' }
     };
     setUser(guestUser);
-    loadUserProfiles('guest_user');
+    loadUserProfiles('guest_user', guestUser);
   };
 
   const selectProfile = (profile: UserProfile) => {

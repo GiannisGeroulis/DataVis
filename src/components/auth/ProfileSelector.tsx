@@ -96,7 +96,7 @@ export default function ProfileSelector() {
             <Flame className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="font-black text-base tracking-widest text-white uppercase leading-none">Pitch Analytica</h1>
+            <h1 className="font-black text-base tracking-widest text-white uppercase leading-none">DataVis</h1>
             <span className="text-[10px] font-bold text-primary tracking-widest uppercase mt-1 block">Tactical Profile Hub</span>
           </div>
         </div>
@@ -344,7 +344,7 @@ export default function ProfileSelector() {
 
       {/* Footer */}
       <footer className="relative z-10 p-4 border-t border-border/40 text-center text-zinc-500 text-xs">
-        Pitch Analytica Workspace Architecture • Πλήρης Απομόνωση Δεδομένων Ανά Προφίλ
+        DataVis Workspace Architecture • Πλήρης Απομόνωση Δεδομένων Ανά Προφίλ
       </footer>
     </div>
   );

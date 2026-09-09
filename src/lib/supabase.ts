@@ -193,7 +193,26 @@ export const opponentService = {
   getOpponentTeams: async (profileIdOverride?: string): Promise<OpponentTeam[]> => {
     const profileId = profileIdOverride || dbService.getProfileScope();
     const storageKey = `fm_p_${profileId}_opponents`;
-    const localTeams = getLS<OpponentTeam[]>(storageKey, []);
+    let localTeams = getLS<OpponentTeam[]>(storageKey, []);
+
+    // Check for any legacy local storage teams if current profile storage is empty
+    if (localTeams.length === 0) {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('fm_p_') && key.endsWith('_opponents') && key !== storageKey) {
+            const found = getLS<OpponentTeam[]>(key, []);
+            if (found && found.length > 0) {
+              localTeams = found.map(t => ({ ...t, profile_id: profileId }));
+              setLS(storageKey, localTeams);
+              break;
+            }
+          }
+        }
+      } catch {
+        // ignore storage scan error
+      }
+    }
 
     if (isRealSupabase && supabase) {
       try {
@@ -204,10 +223,34 @@ export const opponentService = {
           .order('created_at', { ascending: false });
         
         if (!error && data) {
-          if (data.length === 0 && localTeams.length > 0) {
-            // Auto-sync existing local teams to Supabase
-            await supabase.from('opponent_teams').upsert(localTeams);
-            return localTeams;
+          if (data.length === 0) {
+            if (localTeams.length > 0) {
+              // Auto-sync existing local teams to Supabase under this user's profile_id
+              await supabase.from('opponent_teams').upsert(localTeams);
+              return localTeams;
+            }
+
+            // If user has 0 teams in Supabase and 0 teams locally, check if there are legacy teams in Supabase with prof_ IDs
+            const { data: legacyTeams } = await supabase
+              .from('opponent_teams')
+              .select('*')
+              .ilike('profile_id', 'prof_%')
+              .order('created_at', { ascending: false });
+            
+            if (legacyTeams && legacyTeams.length > 0) {
+              // Deduplicate teams by name (keep latest) and claim for this user
+              const uniqueByName = new Map<string, OpponentTeam>();
+              legacyTeams.forEach(t => {
+                const norm = t.name.toLowerCase().trim();
+                if (!uniqueByName.has(norm)) {
+                  uniqueByName.set(norm, { ...t, profile_id: profileId });
+                }
+              });
+              const adopted = Array.from(uniqueByName.values());
+              await supabase.from('opponent_teams').upsert(adopted);
+              setLS(storageKey, adopted);
+              return adopted;
+            }
           }
           setLS(storageKey, data);
           return data as OpponentTeam[];
@@ -393,7 +436,6 @@ export const wyscoutService = {
         const { data, error } = await supabase
           .from('wyscout_matches')
           .select('*')
-          .eq('profile_id', profileId)
           .eq('opponent_team_id', opponentTeamId)
           .order('date', { ascending: false });
         
@@ -644,6 +686,15 @@ export const wyscoutService = {
             if (opponentRow) {
               existing.opponent_xg = Math.round(Number(opponentRow[6] || 0) * 100) / 100;
               existing.opponent_shots = Number(opponentRow[7] || 0);
+              existing.corners_against = Number(opponentRow[16] || 0);
+              existing.corners_against_shots = Number(opponentRow[17] || 0);
+              existing.corners_against_shots_pct = Number(opponentRow[18] || (existing.corners_against ? Math.round((existing.corners_against_shots / existing.corners_against) * 100) : 0));
+              existing.free_kicks_against = Number(opponentRow[19] || 0);
+              existing.free_kicks_against_shots = Number(opponentRow[20] || 0);
+              existing.free_kicks_against_shots_pct = Number(opponentRow[21] || (existing.free_kicks_against ? Math.round((existing.free_kicks_against_shots / existing.free_kicks_against) * 100) : 0));
+              existing.crosses_against = Number(opponentRow[25] || 0);
+              existing.crosses_against_accurate = Number(opponentRow[26] || 0);
+              existing.crosses_against_acc_pct = Number(opponentRow[27] || (existing.crosses_against ? Math.round((existing.crosses_against_accurate / existing.crosses_against) * 100) : 0));
             }
           }
 
@@ -697,6 +748,12 @@ export const wyscoutService = {
             existing.throw_ins = Number(targetRow[30] || 0);
             existing.throw_ins_acc = Number(targetRow[31] || 0);
             existing.goal_kicks = Number(targetRow[33] || 0);
+
+            if (opponentRow) {
+              existing.opponent_passes = Number(opponentRow[6] || existing.opponent_passes || 0);
+              existing.opponent_passes_accurate = Number(opponentRow[7] || existing.opponent_passes_accurate || 0);
+              existing.opponent_passing_accuracy = Number(opponentRow[8] || (existing.opponent_passes ? Math.round((existing.opponent_passes_accurate / existing.opponent_passes) * 100) : existing.opponent_passing_accuracy || 0));
+            }
           }
 
           if (isIndices) {
@@ -706,6 +763,15 @@ export const wyscoutService = {
             existing.ppda = Number(targetRow[9] || 0);
             existing.avg_shot_distance = Number(targetRow[10] || 0);
             existing.avg_pass_length = Number(targetRow[11] || 0);
+
+            if (opponentRow) {
+              existing.opponent_match_tempo = Number(opponentRow[6] || 0);
+              existing.opponent_avg_passes_per_possession = Number(opponentRow[7] || 0);
+              existing.opponent_long_pass_pct = Number(opponentRow[8] || 0);
+              existing.opponent_ppda = Number(opponentRow[9] || 0);
+              existing.opponent_avg_shot_distance = Number(opponentRow[10] || 0);
+              existing.opponent_avg_pass_length = Number(opponentRow[11] || 0);
+            }
           }
 
           if (isOverview) {
@@ -734,6 +800,10 @@ export const wyscoutService = {
               existing.opponent_goals = Number(opponentRow[6] ?? 0);
               existing.opponent_xg = Math.round(Number(opponentRow[7] ?? 0) * 100) / 100;
               existing.opponent_shots = Number(opponentRow[8] ?? 0);
+              existing.opponent_shots_on_target = Number(opponentRow[9] ?? 0);
+              existing.opponent_passes = Number(opponentRow[11] ?? existing.opponent_passes ?? 0);
+              existing.opponent_passes_accurate = Number(opponentRow[12] ?? existing.opponent_passes_accurate ?? 0);
+              existing.opponent_passing_accuracy = Number(opponentRow[13] ?? existing.opponent_passing_accuracy ?? 0);
               existing.opponent_possession = Number(opponentRow[14] ?? (100 - (existing.possession || 50)));
             }
           }

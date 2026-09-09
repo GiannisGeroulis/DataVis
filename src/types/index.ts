@@ -146,7 +146,26 @@ export interface WyscoutMatch {
   opponent_goals?: number;
   opponent_xg?: number;
   opponent_shots?: number;
+  opponent_shots_on_target?: number;
   opponent_possession?: number;
+  opponent_ppda?: number;
+  opponent_match_tempo?: number;
+  opponent_avg_passes_per_possession?: number;
+  opponent_long_pass_pct?: number;
+  opponent_avg_shot_distance?: number;
+  opponent_avg_pass_length?: number;
+  opponent_passes?: number;
+  opponent_passes_accurate?: number;
+  opponent_passing_accuracy?: number;
+  corners_against?: number;
+  corners_against_shots?: number;
+  corners_against_shots_pct?: number;
+  free_kicks_against?: number;
+  free_kicks_against_shots?: number;
+  free_kicks_against_shots_pct?: number;
+  crosses_against?: number;
+  crosses_against_accurate?: number;
+  crosses_against_acc_pct?: number;
   created_at?: string;
 }
 

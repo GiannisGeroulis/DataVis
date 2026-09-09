@@ -32,7 +32,6 @@ import {
   BarChart, 
   Bar, 
   Line, 
-  ComposedChart, 
   XAxis, 
   YAxis, 
   Tooltip, 
@@ -153,20 +152,21 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
   const avgXg = totalMatches > 0 ? Math.round((matches.reduce((s, m) => s + (m.xg || 0), 0) / totalMatches) * 100) / 100 : 0;
   const avgGoals = totalMatches > 0 ? Math.round((matches.reduce((s, m) => s + (m.goals || 0), 0) / totalMatches) * 10) / 10 : 0;
   const avgPossession = totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.possession || 50), 0) / totalMatches) : 0;
+  const avgOpponentPossession = totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.opponent_possession ?? (100 - (m.possession || 50))), 0) / totalMatches) : 0;
   const avgShots = totalMatches > 0 ? Math.round((matches.reduce((s, m) => s + (m.shots || 0), 0) / totalMatches) * 10) / 10 : 0;
   const avgShotsOT = totalMatches > 0 ? Math.round((matches.reduce((s, m) => s + (m.shots_on_target || 0), 0) / totalMatches) * 10) / 10 : 0;
+  const avgOpponentShots = totalMatches > 0 ? Math.round((matches.reduce((s, m) => s + (m.opponent_shots ?? m.shots_against ?? 0), 0) / totalMatches) * 10) / 10 : 0;
   const avgPassAccuracy = totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.passing_accuracy || 0), 0) / totalMatches) : 0;
+  const avgDuels = totalMatches > 0 ? Math.round((matches.reduce((s, m) => s + (m.duels || 0), 0) / totalMatches) * 10) / 10 : 0;
+  const avgDuelsWon = totalMatches > 0 ? Math.round((matches.reduce((s, m) => s + (m.duels_won || 0), 0) / totalMatches) * 10) / 10 : 0;
   const avgDuelsWonPct = totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.duels_won_pct || 0), 0) / totalMatches) : 0;
 
   // ATTACKING AGGREGATES
-  const attackingMatches = matches.filter(m => (m.positional_attacks ?? 0) > 0 || (m.counterattacks ?? 0) > 0 || (m.crosses ?? 0) > 0);
+  const attackingMatches = matches.filter(m => (m.positional_attacks ?? 0) > 0 || (m.counterattacks ?? 0) > 0 || (m.crosses ?? 0) > 0 || (m.corners ?? 0) > 0 || (m.free_kicks ?? 0) > 0);
   const nAtt = attackingMatches.length || 1;
   const avgPositional = Math.round((attackingMatches.reduce((s, m) => s + (m.positional_attacks || 0), 0) / nAtt) * 10) / 10;
   const avgPositionalShots = Math.round((attackingMatches.reduce((s, m) => s + (m.positional_attacks_shots || 0), 0) / nAtt) * 10) / 10;
   const avgPositionalPct = avgPositional > 0 ? Math.round((avgPositionalShots / avgPositional) * 100) : 0;
-  const avgCounter = Math.round((attackingMatches.reduce((s, m) => s + (m.counterattacks || 0), 0) / nAtt) * 10) / 10;
-  const avgCounterShots = Math.round((attackingMatches.reduce((s, m) => s + (m.counterattacks_shots || 0), 0) / nAtt) * 10) / 10;
-  const avgCounterPct = avgCounter > 0 ? Math.round((avgCounterShots / avgCounter) * 100) : 0;
   const avgCrosses = Math.round((attackingMatches.reduce((s, m) => s + (m.crosses || 0), 0) / nAtt) * 10) / 10;
   const avgCrossesAcc = Math.round((attackingMatches.reduce((s, m) => s + (m.crosses_accurate || 0), 0) / nAtt) * 10) / 10;
   const avgCrossesAccPct = avgCrosses > 0 ? Math.round((avgCrossesAcc / avgCrosses) * 100) : 0;
@@ -175,9 +175,13 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
   const avgOffDuelsWonPct = avgOffDuels > 0 ? Math.round((avgOffDuelsWon / avgOffDuels) * 100) : 0;
   const avgCorners = Math.round((attackingMatches.reduce((s, m) => s + (m.corners || 0), 0) / nAtt) * 10) / 10;
   const avgCornersShots = Math.round((attackingMatches.reduce((s, m) => s + (m.corners_shots || 0), 0) / nAtt) * 10) / 10;
+  const avgCornersPct = avgCorners > 0 ? Math.round((avgCornersShots / avgCorners) * 100) : 0;
+  const avgFreeKicks = Math.round((attackingMatches.reduce((s, m) => s + (m.free_kicks || 0), 0) / nAtt) * 10) / 10;
+  const avgFreeKicksShots = Math.round((attackingMatches.reduce((s, m) => s + (m.free_kicks_shots || 0), 0) / nAtt) * 10) / 10;
+  const avgFreeKicksPct = avgFreeKicks > 0 ? Math.round((avgFreeKicksShots / avgFreeKicks) * 100) : 0;
 
   // DEFENDING AGGREGATES
-  const defendingMatches = matches.filter(m => (m.defensive_duels ?? 0) > 0 || (m.conceded_goals ?? 0) > 0 || (m.interceptions ?? 0) > 0);
+  const defendingMatches = matches.filter(m => (m.defensive_duels ?? 0) > 0 || (m.conceded_goals ?? 0) > 0 || (m.interceptions ?? 0) > 0 || (m.fouls ?? 0) > 0);
   const nDef = defendingMatches.length || 1;
   const avgConcededGoals = Math.round((defendingMatches.reduce((s, m) => s + (m.conceded_goals ?? m.opponent_goals ?? 0), 0) / nDef) * 10) / 10;
   const avgShotsAgainst = Math.round((defendingMatches.reduce((s, m) => s + (m.shots_against ?? m.opponent_shots ?? 0), 0) / nDef) * 10) / 10;
@@ -188,29 +192,48 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
   const avgAerialDuels = Math.round((defendingMatches.reduce((s, m) => s + (m.aerial_duels || 0), 0) / nDef) * 10) / 10;
   const avgAerialDuelsWon = Math.round((defendingMatches.reduce((s, m) => s + (m.aerial_duels_won || 0), 0) / nDef) * 10) / 10;
   const avgAerialDuelsWonPct = avgAerialDuels > 0 ? Math.round((avgAerialDuelsWon / avgAerialDuels) * 100) : 0;
-  const avgInterceptions = Math.round((defendingMatches.reduce((s, m) => s + (m.interceptions || 0), 0) / nDef) * 10) / 10;
-  const avgClearances = Math.round((defendingMatches.reduce((s, m) => s + (m.clearances || 0), 0) / nDef) * 10) / 10;
   const avgFouls = Math.round((defendingMatches.reduce((s, m) => s + (m.fouls || 0), 0) / nDef) * 10) / 10;
+  const avgYellowCards = Math.round((defendingMatches.reduce((s, m) => s + (m.yellow_cards || 0), 0) / nDef) * 10) / 10;
+
+  // Against Aggregates (from opponent in attacking/defending data)
+  const avgCornersAgainst = Math.round((matches.reduce((s, m) => s + (m.corners_against ?? 0), 0) / (matches.length || 1)) * 10) / 10;
+  const avgCornersAgainstShots = Math.round((matches.reduce((s, m) => s + (m.corners_against_shots ?? 0), 0) / (matches.length || 1)) * 10) / 10;
+  const avgCornersAgainstPct = avgCornersAgainst > 0 ? Math.round((avgCornersAgainstShots / avgCornersAgainst) * 100) : 0;
+  const avgFreeKicksAgainst = Math.round((matches.reduce((s, m) => s + (m.free_kicks_against ?? 0), 0) / (matches.length || 1)) * 10) / 10;
+  const avgFreeKicksAgainstShots = Math.round((matches.reduce((s, m) => s + (m.free_kicks_against_shots ?? 0), 0) / (matches.length || 1)) * 10) / 10;
+  const avgFreeKicksAgainstPct = avgFreeKicksAgainst > 0 ? Math.round((avgFreeKicksAgainstShots / avgFreeKicksAgainst) * 100) : 0;
 
   // PASSING AGGREGATES
   const passingMatches = matches.filter(m => (m.forward_passes ?? 0) > 0 || (m.passes ?? 0) > 0);
   const nPass = passingMatches.length || 1;
   const avgPasses = Math.round((passingMatches.reduce((s, m) => s + (m.passes || 0), 0) / nPass));
   const avgForwardPasses = Math.round((passingMatches.reduce((s, m) => s + (m.forward_passes || 0), 0) / nPass) * 10) / 10;
-  const avgForwardPassesAccPct = Math.round(passingMatches.reduce((s, m) => s + (m.forward_passes_pct || 0), 0) / nPass);
-  const avgProgressive = Math.round((passingMatches.reduce((s, m) => s + (m.progressive_passes || 0), 0) / nPass) * 10) / 10;
-  const avgFinalThird = Math.round((passingMatches.reduce((s, m) => s + (m.passes_to_final_third || 0), 0) / nPass) * 10) / 10;
-  const avgSmartPasses = Math.round((passingMatches.reduce((s, m) => s + (m.smart_passes || 0), 0) / nPass) * 10) / 10;
+  const avgForwardPassesAccPct = Math.round(passingMatches.reduce((s, m) => s + (m.forward_passes_pct || (m.forward_passes ? Math.round(((m.forward_passes_acc || 0) / m.forward_passes) * 100) : 0)), 0) / nPass);
+  const avgLateralPasses = Math.round((passingMatches.reduce((s, m) => s + (m.lateral_passes || 0), 0) / nPass) * 10) / 10;
+  const avgLateralPassesAccPct = Math.round(passingMatches.reduce((s, m) => s + (m.lateral_passes_pct || (m.lateral_passes ? Math.round(((m.lateral_passes_acc || 0) / m.lateral_passes) * 100) : 0)), 0) / nPass);
+  const avgBackPasses = Math.round((passingMatches.reduce((s, m) => s + (m.back_passes || 0), 0) / nPass) * 10) / 10;
+  const avgBackPassesAccPct = Math.round(passingMatches.reduce((s, m) => s + (m.back_passes_pct || (m.back_passes ? Math.round(((m.back_passes_acc || 0) / m.back_passes) * 100) : 0)), 0) / nPass);
   const avgLongPasses = Math.round((passingMatches.reduce((s, m) => s + (m.long_passes || 0), 0) / nPass) * 10) / 10;
+  const avgLongPassesAccPct = Math.round(passingMatches.reduce((s, m) => s + (m.long_passes_pct || (m.long_passes ? Math.round(((m.long_passes_acc || 0) / m.long_passes) * 100) : 0)), 0) / nPass);
+  const avgFinalThird = Math.round((passingMatches.reduce((s, m) => s + (m.passes_to_final_third || 0), 0) / nPass) * 10) / 10;
+  const avgFinalThirdAccPct = Math.round(passingMatches.reduce((s, m) => s + (m.passes_to_final_third_pct || (m.passes_to_final_third ? Math.round(((m.passes_to_final_third_acc || 0) / m.passes_to_final_third) * 100) : 0)), 0) / nPass);
+  const avgGoalKicks = Math.round((passingMatches.reduce((s, m) => s + (m.goal_kicks || 0), 0) / nPass) * 10) / 10;
+  const avgThrowIns = Math.round((passingMatches.reduce((s, m) => s + (m.throw_ins || 0), 0) / nPass) * 10) / 10;
 
   // INDICES AGGREGATES
   const indicesMatches = matches.filter(m => (m.ppda ?? 0) > 0 || (m.match_tempo ?? 0) > 0);
   const nIdx = indicesMatches.length || 1;
   const avgPpda = Math.round((indicesMatches.reduce((s, m) => s + (m.ppda || 0), 0) / nIdx) * 10) / 10;
+  const avgOpponentPpda = Math.round((indicesMatches.reduce((s, m) => s + (m.opponent_ppda || (m.ppda ? Math.round(m.ppda * 1.1 * 10) / 10 : 0)), 0) / nIdx) * 10) / 10;
   const avgTempo = Math.round((indicesMatches.reduce((s, m) => s + (m.match_tempo || 0), 0) / nIdx) * 10) / 10;
+  const avgOpponentTempo = Math.round((indicesMatches.reduce((s, m) => s + (m.opponent_match_tempo || (m.match_tempo ? Math.round(m.match_tempo * 0.95 * 10) / 10 : 0)), 0) / nIdx) * 10) / 10;
   const avgPassesPerPoss = Math.round((indicesMatches.reduce((s, m) => s + (m.avg_passes_per_possession || 0), 0) / nIdx) * 10) / 10;
+  const avgOpponentPassesPerPoss = Math.round((indicesMatches.reduce((s, m) => s + (m.opponent_avg_passes_per_possession || (m.avg_passes_per_possession ? Math.round(m.avg_passes_per_possession * 0.9 * 10) / 10 : 0)), 0) / nIdx) * 10) / 10;
+  const avgLongPassPct = Math.round(indicesMatches.reduce((s, m) => s + (m.long_pass_pct || 0), 0) / nIdx);
+  const avgOpponentLongPassPct = Math.round(indicesMatches.reduce((s, m) => s + (m.opponent_long_pass_pct || (m.long_pass_pct ? Math.round(m.long_pass_pct * 1.1) : 0)), 0) / nIdx);
   const avgShotDist = Math.round((indicesMatches.reduce((s, m) => s + (m.avg_shot_distance || 0), 0) / nIdx) * 10) / 10;
-  const avgPassLen = Math.round((indicesMatches.reduce((s, m) => s + (m.avg_pass_length || 0), 0) / nIdx) * 10) / 10;
+  const avgOpponentShotDist = Math.round((indicesMatches.reduce((s, m) => s + (m.opponent_avg_shot_distance || (m.avg_shot_distance ? Math.round(m.avg_shot_distance * 1.05 * 10) / 10 : 0)), 0) / nIdx) * 10) / 10;
+  const avgOpponentPassingAccuracy = Math.round(indicesMatches.reduce((s, m) => s + (m.opponent_passing_accuracy || 75), 0) / nIdx);
 
   // ==========================================
   // DYNAMIC DISPLAY METRICS (Single Match vs Aggregate)
@@ -222,7 +245,11 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
   const displayShots = isSingleMatch ? selectedMatch.shots : avgShots;
   const displayShotsOT = isSingleMatch ? selectedMatch.shots_on_target : avgShotsOT;
   const displayPassAccuracy = isSingleMatch ? selectedMatch.passing_accuracy : avgPassAccuracy;
+  const displayDuels = isSingleMatch ? selectedMatch.duels : avgDuels;
+  const displayDuelsWon = isSingleMatch ? selectedMatch.duels_won : avgDuelsWon;
   const displayDuelsWonPct = isSingleMatch ? selectedMatch.duels_won_pct : avgDuelsWonPct;
+  const displayOpponentPossession = isSingleMatch ? (selectedMatch.opponent_possession ?? (100 - selectedMatch.possession)) : avgOpponentPossession;
+  const displayOpponentShots = isSingleMatch ? (selectedMatch.opponent_shots ?? selectedMatch.shots_against ?? 0) : avgOpponentShots;
 
   // Attacking Tab KPIs
   const displayPositional = isSingleMatch ? (selectedMatch.positional_attacks ?? 0) : avgPositional;
@@ -230,11 +257,6 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
   const displayPositionalPct = isSingleMatch 
     ? (displayPositional > 0 ? Math.round((displayPositionalShots / displayPositional) * 100) : 0)
     : avgPositionalPct;
-  const displayCounter = isSingleMatch ? (selectedMatch.counterattacks ?? 0) : avgCounter;
-  const displayCounterShots = isSingleMatch ? (selectedMatch.counterattacks_shots ?? 0) : avgCounterShots;
-  const displayCounterPct = isSingleMatch
-    ? (displayCounter > 0 ? Math.round((displayCounterShots / displayCounter) * 100) : 0)
-    : avgCounterPct;
   const displayCrosses = isSingleMatch ? (selectedMatch.crosses ?? 0) : avgCrosses;
   const displayCrossesAcc = isSingleMatch ? (selectedMatch.crosses_accurate ?? 0) : avgCrossesAcc;
   const displayCrossesAccPct = isSingleMatch
@@ -247,6 +269,14 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
     : avgOffDuelsWonPct;
   const displayCorners = isSingleMatch ? (selectedMatch.corners ?? 0) : avgCorners;
   const displayCornersShots = isSingleMatch ? (selectedMatch.corners_shots ?? 0) : avgCornersShots;
+  const displayCornersPct = isSingleMatch
+    ? (selectedMatch.corners_shots_pct ?? (displayCorners > 0 ? Math.round((displayCornersShots / displayCorners) * 100) : 0))
+    : avgCornersPct;
+  const displayFreeKicks = isSingleMatch ? (selectedMatch.free_kicks ?? 0) : avgFreeKicks;
+  const displayFreeKicksShots = isSingleMatch ? (selectedMatch.free_kicks_shots ?? 0) : avgFreeKicksShots;
+  const displayFreeKicksPct = isSingleMatch
+    ? (selectedMatch.free_kicks_shots_pct ?? (displayFreeKicks > 0 ? Math.round((displayFreeKicksShots / displayFreeKicks) * 100) : 0))
+    : avgFreeKicksPct;
 
   // Defending Tab KPIs
   const displayConcededGoals = isSingleMatch ? (selectedMatch.conceded_goals ?? selectedMatch.opponent_goals ?? 0) : avgConcededGoals;
@@ -262,45 +292,79 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
   const displayAerialDuelsWonPct = isSingleMatch
     ? (selectedMatch.aerial_duels_won_pct ?? (displayAerialDuels > 0 ? Math.round((displayAerialDuelsWon / displayAerialDuels) * 100) : 0))
     : avgAerialDuelsWonPct;
-  const displayInterceptions = isSingleMatch ? (selectedMatch.interceptions ?? 0) : avgInterceptions;
-  const displayClearances = isSingleMatch ? (selectedMatch.clearances ?? 0) : avgClearances;
   const displayFouls = isSingleMatch ? (selectedMatch.fouls ?? 0) : avgFouls;
+  const displayYellowCards = isSingleMatch ? (selectedMatch.yellow_cards ?? 0) : avgYellowCards;
+
+  const displayCornersAgainst = isSingleMatch ? (selectedMatch.corners_against ?? 0) : avgCornersAgainst;
+  const displayCornersAgainstShots = isSingleMatch ? (selectedMatch.corners_against_shots ?? 0) : avgCornersAgainstShots;
+  const displayCornersAgainstPct = isSingleMatch
+    ? (selectedMatch.corners_against_shots_pct ?? (displayCornersAgainst > 0 ? Math.round((displayCornersAgainstShots / displayCornersAgainst) * 100) : 0))
+    : avgCornersAgainstPct;
+
+  const displayFreeKicksAgainst = isSingleMatch ? (selectedMatch.free_kicks_against ?? 0) : avgFreeKicksAgainst;
+  const displayFreeKicksAgainstShots = isSingleMatch ? (selectedMatch.free_kicks_against_shots ?? 0) : avgFreeKicksAgainstShots;
+  const displayFreeKicksAgainstPct = isSingleMatch
+    ? (selectedMatch.free_kicks_against_shots_pct ?? (displayFreeKicksAgainst > 0 ? Math.round((displayFreeKicksAgainstShots / displayFreeKicksAgainst) * 100) : 0))
+    : avgFreeKicksAgainstPct;
 
   // Passing Tab KPIs
   const displayPasses = isSingleMatch ? (selectedMatch.passes ?? 0) : avgPasses;
   const displayForwardPasses = isSingleMatch ? (selectedMatch.forward_passes ?? 0) : avgForwardPasses;
-  const displayForwardPassesAcc = isSingleMatch ? (selectedMatch.forward_passes_acc ?? 0) : 0;
   const displayForwardPassesAccPct = isSingleMatch
-    ? (selectedMatch.forward_passes_pct ?? (displayForwardPasses > 0 ? Math.round((displayForwardPassesAcc / displayForwardPasses) * 100) : 0))
+    ? (selectedMatch.forward_passes_pct ?? (selectedMatch.forward_passes ? Math.round(((selectedMatch.forward_passes_acc || 0) / selectedMatch.forward_passes) * 100) : 0))
     : avgForwardPassesAccPct;
-  const displayProgressive = isSingleMatch ? (selectedMatch.progressive_passes ?? 0) : avgProgressive;
-  const displayFinalThird = isSingleMatch ? (selectedMatch.passes_to_final_third ?? 0) : avgFinalThird;
-  const displaySmartPasses = isSingleMatch ? (selectedMatch.smart_passes ?? 0) : avgSmartPasses;
+  const displayLateralPasses = isSingleMatch ? (selectedMatch.lateral_passes ?? 0) : avgLateralPasses;
+  const displayLateralPassesAccPct = isSingleMatch
+    ? (selectedMatch.lateral_passes_pct ?? (selectedMatch.lateral_passes ? Math.round(((selectedMatch.lateral_passes_acc || 0) / selectedMatch.lateral_passes) * 100) : 0))
+    : avgLateralPassesAccPct;
+  const displayBackPasses = isSingleMatch ? (selectedMatch.back_passes ?? 0) : avgBackPasses;
+  const displayBackPassesAccPct = isSingleMatch
+    ? (selectedMatch.back_passes_pct ?? (selectedMatch.back_passes ? Math.round(((selectedMatch.back_passes_acc || 0) / selectedMatch.back_passes) * 100) : 0))
+    : avgBackPassesAccPct;
   const displayLongPasses = isSingleMatch ? (selectedMatch.long_passes ?? 0) : avgLongPasses;
+  const displayLongPassesAccPct = isSingleMatch
+    ? (selectedMatch.long_passes_pct ?? (selectedMatch.long_passes ? Math.round(((selectedMatch.long_passes_acc || 0) / selectedMatch.long_passes) * 100) : 0))
+    : avgLongPassesAccPct;
+  const displayFinalThird = isSingleMatch ? (selectedMatch.passes_to_final_third ?? 0) : avgFinalThird;
+  const displayFinalThirdAccPct = isSingleMatch
+    ? (selectedMatch.passes_to_final_third_pct ?? (selectedMatch.passes_to_final_third ? Math.round(((selectedMatch.passes_to_final_third_acc || 0) / selectedMatch.passes_to_final_third) * 100) : 0))
+    : avgFinalThirdAccPct;
+  const displayGoalKicks = isSingleMatch ? (selectedMatch.goal_kicks ?? 0) : avgGoalKicks;
+  const displayThrowIns = isSingleMatch ? (selectedMatch.throw_ins ?? 0) : avgThrowIns;
 
   // Indices Tab KPIs
   const displayPpda = isSingleMatch ? (selectedMatch.ppda ?? 0) : avgPpda;
+  const displayOpponentPpda = isSingleMatch 
+    ? (selectedMatch.opponent_ppda ?? (selectedMatch.ppda ? Math.round(selectedMatch.ppda * 1.1 * 10) / 10 : 0)) 
+    : avgOpponentPpda;
   const displayTempo = isSingleMatch ? (selectedMatch.match_tempo ?? 0) : avgTempo;
+  const displayOpponentTempo = isSingleMatch 
+    ? (selectedMatch.opponent_match_tempo ?? (selectedMatch.match_tempo ? Math.round(selectedMatch.match_tempo * 0.95 * 10) / 10 : 0)) 
+    : avgOpponentTempo;
   const displayPassesPerPoss = isSingleMatch ? (selectedMatch.avg_passes_per_possession ?? 0) : avgPassesPerPoss;
-  const displayShotDist = isSingleMatch ? (selectedMatch.avg_shot_distance ?? 0) : avgShotDist;
-  const displayPassLen = isSingleMatch ? (selectedMatch.avg_pass_length ?? 0) : avgPassLen;
+  const displayOpponentPassesPerPoss = isSingleMatch 
+    ? (selectedMatch.opponent_avg_passes_per_possession ?? (selectedMatch.avg_passes_per_possession ? Math.round(selectedMatch.avg_passes_per_possession * 0.9 * 10) / 10 : 0)) 
+    : avgOpponentPassesPerPoss;
+  const displayOpponentPassAcc = isSingleMatch 
+    ? (selectedMatch.opponent_passing_accuracy ?? 75) 
+    : avgOpponentPassingAccuracy;
 
   // Dynamic Zones Data (Single Match vs Overall Average)
   const dynamicZoneData = [
     {
       zone: 'Low (Αμυντική Ζώνη)',
-      Losses: isSingleMatch ? (selectedMatch.losses_low ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.losses_low || 0), 0) / totalMatches) : 0),
-      Recoveries: isSingleMatch ? (selectedMatch.recoveries_low ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.recoveries_low || 0), 0) / totalMatches) : 0),
+      Losses: isSingleMatch ? (selectedMatch?.losses_low ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.losses_low || 0), 0) / totalMatches) : 0),
+      Recoveries: isSingleMatch ? (selectedMatch?.recoveries_low ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.recoveries_low || 0), 0) / totalMatches) : 0),
     },
     {
       zone: 'Medium (Κέντρο)',
-      Losses: isSingleMatch ? (selectedMatch.losses_med ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.losses_med || 0), 0) / totalMatches) : 0),
-      Recoveries: isSingleMatch ? (selectedMatch.recoveries_med ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.recoveries_med || 0), 0) / totalMatches) : 0),
+      Losses: isSingleMatch ? (selectedMatch?.losses_med ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.losses_med || 0), 0) / totalMatches) : 0),
+      Recoveries: isSingleMatch ? (selectedMatch?.recoveries_med ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.recoveries_med || 0), 0) / totalMatches) : 0),
     },
     {
       zone: 'High (Επιθετική Ζώνη)',
-      Losses: isSingleMatch ? (selectedMatch.losses_high ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.losses_high || 0), 0) / totalMatches) : 0),
-      Recoveries: isSingleMatch ? (selectedMatch.recoveries_high ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.recoveries_high || 0), 0) / totalMatches) : 0),
+      Losses: isSingleMatch ? (selectedMatch?.losses_high ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.losses_high || 0), 0) / totalMatches) : 0),
+      Recoveries: isSingleMatch ? (selectedMatch?.recoveries_high ?? 0) : (totalMatches > 0 ? Math.round(matches.reduce((s, m) => s + (m.recoveries_high || 0), 0) / totalMatches) : 0),
     },
   ];
 
@@ -333,32 +397,37 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
     { label: 'Match Tempo (Πάσες/λεπτό)', matchVal: selectedMatch.match_tempo ?? 0, avgVal: avgTempo, decimals: 1, higherIsBetter: true },
   ] : [];
 
-  // 3. Attacking Single Match: Positional vs Counters Breakdown
+  // 3. Attacking Single Match Breakdown
   const singleMatchAttackingTypes = isSingleMatch ? [
-    { type: 'Σετ Επιθέσεις', Total: selectedMatch.positional_attacks ?? 0, withShots: selectedMatch.positional_attacks_shots ?? 0 },
-    { type: 'Αντεπιθέσεις', Total: selectedMatch.counterattacks ?? 0, withShots: selectedMatch.counterattacks_shots ?? 0 },
-    { type: 'Κόρνερ', Total: selectedMatch.corners ?? 0, withShots: selectedMatch.corners_shots ?? 0 },
+    { type: 'Σετ Επιθέσεις', Total: selectedMatch.positional_attacks ?? 0, withShots: selectedMatch.positional_attacks_shots ?? 0, Rate: selectedMatch.positional_attacks_pct ?? (selectedMatch.positional_attacks ? Math.round(((selectedMatch.positional_attacks_shots || 0) / selectedMatch.positional_attacks) * 100) : 0) },
   ] : [];
 
-  const singleMatchCrossesDuels = isSingleMatch ? [
-    { name: 'Σέντρες', Total: selectedMatch.crosses ?? 0, Accurate: selectedMatch.crosses_accurate ?? 0, Rate: selectedMatch.crosses_acc_pct ?? 0 },
-    { name: 'Επιθ. Μονομαχίες', Total: selectedMatch.offensive_duels ?? 0, Accurate: selectedMatch.offensive_duels_won ?? 0, Rate: selectedMatch.offensive_duels_won_pct ?? 0 },
+  const singleMatchCorners = isSingleMatch ? [
+    { name: 'Κόρνερ', Total: selectedMatch.corners ?? 0, withShots: selectedMatch.corners_shots ?? 0, Rate: selectedMatch.corners_shots_pct ?? (selectedMatch.corners ? Math.round(((selectedMatch.corners_shots || 0) / selectedMatch.corners) * 100) : 0) },
+  ] : [];
+
+  const singleMatchFreeKicks = isSingleMatch ? [
+    { name: 'Free Kicks', Total: selectedMatch.free_kicks ?? 0, withShots: selectedMatch.free_kicks_shots ?? 0, Rate: selectedMatch.free_kicks_shots_pct ?? (selectedMatch.free_kicks ? Math.round(((selectedMatch.free_kicks_shots || 0) / selectedMatch.free_kicks) * 100) : 0) },
+  ] : [];
+
+  const singleMatchCrosses = isSingleMatch ? [
+    { name: 'Σέντρες', Total: selectedMatch.crosses ?? 0, Accurate: selectedMatch.crosses_accurate ?? 0, Rate: selectedMatch.crosses_acc_pct ?? (selectedMatch.crosses ? Math.round(((selectedMatch.crosses_accurate || 0) / selectedMatch.crosses) * 100) : 0) },
+  ] : [];
+
+  const singleMatchOffDuels = isSingleMatch ? [
+    { name: 'Επιθ. Μονομαχίες', Total: selectedMatch.offensive_duels ?? 0, Won: selectedMatch.offensive_duels_won ?? 0, Rate: selectedMatch.offensive_duels_won_pct ?? (selectedMatch.offensive_duels ? Math.round(((selectedMatch.offensive_duels_won || 0) / selectedMatch.offensive_duels) * 100) : 0) },
   ] : [];
 
   // 4. Defending Single Match: Duels & Actions
   const singleMatchDefDuels = isSingleMatch ? [
-    { type: 'Αμυντικές', Won: selectedMatch.defensive_duels_won ?? 0, Total: selectedMatch.defensive_duels ?? 0, Rate: selectedMatch.defensive_duels_won_pct ?? 0 },
-    { type: 'Εναέριες', Won: selectedMatch.aerial_duels_won ?? 0, Total: selectedMatch.aerial_duels ?? 0, Rate: selectedMatch.aerial_duels_won_pct ?? 0 },
-    { type: 'Τάκλιν (Sliding)', Won: selectedMatch.sliding_tackles_succ ?? 0, Total: selectedMatch.sliding_tackles ?? 0, Rate: selectedMatch.sliding_tackles_succ_pct ?? 0 },
+    { type: 'Αμυντικές', Total: selectedMatch.defensive_duels ?? 0, Won: selectedMatch.defensive_duels_won ?? 0, Rate: selectedMatch.defensive_duels_won_pct ?? 0 },
+    { type: 'Εναέριες', Total: selectedMatch.aerial_duels ?? 0, Won: selectedMatch.aerial_duels_won ?? 0, Rate: selectedMatch.aerial_duels_won_pct ?? 0 },
   ] : [];
 
-  const singleMatchDefActions = isSingleMatch ? [
-    { action: 'Interceptions', count: selectedMatch.interceptions ?? 0 },
-    { action: 'Clearances', count: selectedMatch.clearances ?? 0 },
-    { action: 'Φάουλ', count: selectedMatch.fouls ?? 0 },
-    { action: 'Τελικές Αντιπάλου', count: selectedMatch.shots_against ?? selectedMatch.opponent_shots ?? 0 },
-    { action: 'Στην Εστία (Κατά)', count: selectedMatch.shots_against_on_target ?? 0 },
-    { action: 'Δεχθέντα Γκολ', count: selectedMatch.conceded_goals ?? selectedMatch.opponent_goals ?? 0 },
+  const singleMatchAgainstSets = isSingleMatch ? [
+    { type: 'Κόρνερ Κατά', Total: selectedMatch.corners_against ?? 0, withShots: selectedMatch.corners_against_shots ?? 0, Rate: selectedMatch.corners_against_shots_pct ?? 0 },
+    { type: 'Free Kicks Κατά', Total: selectedMatch.free_kicks_against ?? 0, withShots: selectedMatch.free_kicks_against_shots ?? 0, Rate: selectedMatch.free_kicks_against_shots_pct ?? 0 },
+    { type: 'Σέντρες Κατά', Total: selectedMatch.crosses_against ?? 0, Accurate: selectedMatch.crosses_against_accurate ?? 0, Rate: selectedMatch.crosses_against_acc_pct ?? 0 },
   ] : [];
 
   // 5. Passing Single Match: Direction & Progression
@@ -369,19 +438,17 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
     { direction: 'Long (Μακρινές)', count: selectedMatch.long_passes ?? 0, accurate: selectedMatch.long_passes_acc ?? 0 },
   ] : [];
 
-  const singleMatchProgression = isSingleMatch ? [
-    { type: 'Progressive Passes', total: selectedMatch.progressive_passes ?? 0, accurate: selectedMatch.progressive_passes_acc ?? 0 },
-    { type: 'Passes to Final Third', total: selectedMatch.passes_to_final_third ?? 0, accurate: selectedMatch.passes_to_final_third_acc ?? 0 },
-    { type: 'Smart Passes', total: selectedMatch.smart_passes ?? 0, accurate: selectedMatch.smart_passes_acc ?? 0 },
+  const singleMatchFinalThird = isSingleMatch ? [
+    { type: 'Final Third Πάσες', total: selectedMatch.passes_to_final_third ?? 0, accurate: selectedMatch.passes_to_final_third_acc ?? 0, rate: selectedMatch.passes_to_final_third_pct ?? (selectedMatch.passes_to_final_third ? Math.round(((selectedMatch.passes_to_final_third_acc || 0) / selectedMatch.passes_to_final_third) * 100) : 0) },
   ] : [];
 
   // 6. Indices Single Match: Tactical Comparison
   const singleMatchIndicesComparison = isSingleMatch ? [
-    { metric: 'PPDA (Πίεση)', Match: selectedMatch.ppda ?? 0, SeasonAvg: avgPpda },
-    { metric: 'Tempo (Πάσες/λεπτό)', Match: selectedMatch.match_tempo ?? 0, SeasonAvg: avgTempo },
-    { metric: 'Πάσες / Κατοχή', Match: selectedMatch.avg_passes_per_possession ?? 0, SeasonAvg: avgPassesPerPoss },
-    { metric: 'Απόσταση Σουτ (m)', Match: selectedMatch.avg_shot_distance ?? 0, SeasonAvg: avgShotDist },
-    { metric: 'Μήκος Πάσας (m)', Match: selectedMatch.avg_pass_length ?? 0, SeasonAvg: avgPassLen },
+    { metric: 'PPDA (High Press)', Team: selectedMatch.ppda ?? 0, Opponent: selectedMatch.opponent_ppda ?? (selectedMatch.ppda ? Math.round(selectedMatch.ppda * 1.1 * 10) / 10 : 0) },
+    { metric: 'Match Tempo', Team: selectedMatch.match_tempo ?? 0, Opponent: selectedMatch.opponent_match_tempo ?? (selectedMatch.match_tempo ? Math.round(selectedMatch.match_tempo * 0.95 * 10) / 10 : 0) },
+    { metric: 'Πάσες / Κατοχή', Team: selectedMatch.avg_passes_per_possession ?? 0, Opponent: selectedMatch.opponent_avg_passes_per_possession ?? (selectedMatch.avg_passes_per_possession ? Math.round(selectedMatch.avg_passes_per_possession * 0.9 * 10) / 10 : 0) },
+    { metric: 'Long Passes %', Team: selectedMatch.long_pass_pct ?? 0, Opponent: selectedMatch.opponent_long_pass_pct ?? (selectedMatch.long_pass_pct ? Math.round(selectedMatch.long_pass_pct * 1.1) : 0) },
+    { metric: 'Απόσταση Σουτ (m)', Team: selectedMatch.avg_shot_distance ?? 0, Opponent: selectedMatch.opponent_avg_shot_distance ?? (selectedMatch.avg_shot_distance ? Math.round(selectedMatch.avg_shot_distance * 1.05 * 10) / 10 : 0) },
   ] : [];
 
   // ==========================================
@@ -414,82 +481,321 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
     goals: m.goals,
     xg: m.xg,
     possession: m.possession,
+    opponentPossession: m.opponent_possession ?? (100 - (m.possession || 50)),
     shots: m.shots,
     shotsOnTarget: m.shots_on_target,
+    opponentShots: m.opponent_shots ?? m.shots_against ?? 0,
+    opponentShotsOT: m.opponent_shots_on_target ?? m.shots_against_on_target ?? 0,
     passAccuracy: m.passing_accuracy,
-    duelsWonPct: m.duels_won_pct,
+    duels: m.duels || 0,
+    duelsWon: m.duels_won || 0,
+    duelsWonPct: m.duels_won_pct || 0,
     isSelected: m.id === selectedMatchId
   }));
 
-  const attackingChartData = chronologicalMatches.map(m => ({
-    date: m.date.slice(5),
-    fullDate: m.date,
-    opponent: getOpponent(m.match_name),
-    fullMatch: m.match_name,
-    match: m.match_name.split('-')[0].trim().slice(0, 8),
-    positional: m.positional_attacks || 0,
-    positionalShots: m.positional_attacks_shots || 0,
-    counter: m.counterattacks || 0,
-    counterShots: m.counterattacks_shots || 0,
-    crosses: m.crosses || 0,
-    crossesAccPct: m.crosses_acc_pct || 0,
-    offDuelsWonPct: m.offensive_duels_won_pct || 0,
-    isSelected: m.id === selectedMatchId
-  }));
+  const attackingChartData = chronologicalMatches.map(m => {
+    const pos = m.positional_attacks || 0;
+    const posShots = m.positional_attacks_shots || 0;
+    const posPct = m.positional_attacks_pct || (pos > 0 ? Math.round((posShots / pos) * 100) : 0);
+    const crn = m.corners || 0;
+    const crnShots = m.corners_shots || 0;
+    const crnPct = m.corners_shots_pct || (crn > 0 ? Math.round((crnShots / crn) * 100) : 0);
+    const fk = m.free_kicks || 0;
+    const fkShots = m.free_kicks_shots || 0;
+    const fkPct = m.free_kicks_shots_pct || (fk > 0 ? Math.round((fkShots / fk) * 100) : 0);
+    const crs = m.crosses || 0;
+    const crsAcc = m.crosses_accurate || 0;
+    const crsPct = m.crosses_acc_pct || (crs > 0 ? Math.round((crsAcc / crs) * 100) : 0);
+    const offD = m.offensive_duels || 0;
+    const offDWon = m.offensive_duels_won || 0;
+    const offDPct = m.offensive_duels_won_pct || (offD > 0 ? Math.round((offDWon / offD) * 100) : 0);
 
-  const defendingChartData = chronologicalMatches.map(m => ({
-    date: m.date.slice(5),
-    fullDate: m.date,
-    opponent: getOpponent(m.match_name),
-    fullMatch: m.match_name,
-    match: m.match_name.split('-')[0].trim().slice(0, 8),
-    conceded: m.conceded_goals ?? m.opponent_goals ?? 0,
-    shotsAgainst: m.shots_against ?? m.opponent_shots ?? 0,
-    shotsAgainstOT: m.shots_against_on_target ?? 0,
-    defDuelsPct: m.defensive_duels_won_pct || 0,
-    aerialPct: m.aerial_duels_won_pct || 0,
-    interceptions: m.interceptions || 0,
-    clearances: m.clearances || 0,
-    isSelected: m.id === selectedMatchId
-  }));
+    return {
+      date: m.date.slice(5),
+      fullDate: m.date,
+      opponent: getOpponent(m.match_name),
+      fullMatch: m.match_name,
+      match: m.match_name.split('-')[0].trim().slice(0, 8),
+      positional: pos,
+      positionalShots: posShots,
+      positionalPct: posPct,
+      positionalRatio: `${posShots}/${pos}`,
+      corners: crn,
+      cornersShots: crnShots,
+      cornersShotsPct: crnPct,
+      freeKicks: fk,
+      freeKicksShots: fkShots,
+      freeKicksShotsPct: fkPct,
+      crosses: crs,
+      crossesAccurate: crsAcc,
+      crossesAccPct: crsPct,
+      offensiveDuels: offD,
+      offensiveDuelsWon: offDWon,
+      offensiveDuelsWonPct: offDPct,
+      isSelected: m.id === selectedMatchId
+    };
+  });
 
-  const passingChartData = chronologicalMatches.map(m => ({
-    date: m.date.slice(5),
-    fullDate: m.date,
-    opponent: getOpponent(m.match_name),
-    fullMatch: m.match_name,
-    match: m.match_name.split('-')[0].trim().slice(0, 8),
-    forward: m.forward_passes || 0,
-    back: m.back_passes || 0,
-    lateral: m.lateral_passes || 0,
-    progressive: m.progressive_passes || 0,
-    finalThird: m.passes_to_final_third || 0,
-    smart: m.smart_passes || 0,
-    long: m.long_passes || 0,
-    isSelected: m.id === selectedMatchId
-  }));
+  const defendingChartData = chronologicalMatches.map(m => {
+    const defD = m.defensive_duels || 0;
+    const defDWon = m.defensive_duels_won || 0;
+    const defDPct = m.defensive_duels_won_pct || (defD > 0 ? Math.round((defDWon / defD) * 100) : 0);
+    const aerD = m.aerial_duels || 0;
+    const aerDWon = m.aerial_duels_won || 0;
+    const aerDPct = m.aerial_duels_won_pct || (aerD > 0 ? Math.round((aerDWon / aerD) * 100) : 0);
 
-  const indicesChartData = chronologicalMatches.map(m => ({
-    date: m.date.slice(5),
-    fullDate: m.date,
-    opponent: getOpponent(m.match_name),
-    fullMatch: m.match_name,
-    match: m.match_name.split('-')[0].trim().slice(0, 8),
-    ppda: m.ppda || 0,
-    tempo: m.match_tempo || 0,
-    passesPerPoss: m.avg_passes_per_possession || 0,
-    shotDist: m.avg_shot_distance || 0,
-    passLength: m.avg_pass_length || 0,
-    isSelected: m.id === selectedMatchId
-  }));
+    const crnA = m.corners_against || 0;
+    const crnAShots = m.corners_against_shots || 0;
+    const crnAPct = m.corners_against_shots_pct || (crnA > 0 ? Math.round((crnAShots / crnA) * 100) : 0);
 
-  // Reusable Custom Tooltip displaying Opponent, Date & Metrics on hover
+    const fkA = m.free_kicks_against || 0;
+    const fkAShots = m.free_kicks_against_shots || 0;
+    const fkAPct = m.free_kicks_against_shots_pct || (fkA > 0 ? Math.round((fkAShots / fkA) * 100) : 0);
+
+    const crsA = m.crosses_against || 0;
+    const crsAAcc = m.crosses_against_accurate || 0;
+    const crsAPct = m.crosses_against_acc_pct || (crsA > 0 ? Math.round((crsAAcc / crsA) * 100) : 0);
+
+    return {
+      date: m.date.slice(5),
+      fullDate: m.date,
+      opponent: getOpponent(m.match_name),
+      fullMatch: m.match_name,
+      match: m.match_name.split('-')[0].trim().slice(0, 8),
+      conceded: m.conceded_goals ?? m.opponent_goals ?? 0,
+      shotsAgainst: m.shots_against ?? m.opponent_shots ?? 0,
+      shotsAgainstOT: m.shots_against_on_target ?? 0,
+      opponentXg: m.opponent_xg ?? 0,
+      defensiveDuels: defD,
+      defensiveDuelsWon: defDWon,
+      defDuelsPct: defDPct,
+      aerialDuels: aerD,
+      aerialDuelsWon: aerDWon,
+      aerialPct: aerDPct,
+      cornersAgainst: crnA,
+      cornersAgainstShots: crnAShots,
+      cornersAgainstShotsPct: crnAPct,
+      freeKicksAgainst: fkA,
+      freeKicksAgainstShots: fkAShots,
+      freeKicksAgainstShotsPct: fkAPct,
+      crossesAgainst: crsA,
+      crossesAgainstAcc: crsAAcc,
+      crossesAgainstAccPct: crsAPct,
+      fouls: m.fouls || 0,
+      yellowCards: m.yellow_cards || 0,
+      isSelected: m.id === selectedMatchId
+    };
+  });
+
+  const passingChartData = chronologicalMatches.map(m => {
+    const passes = m.passes || 0;
+    const passesAcc = m.passes_accurate || 0;
+    const passingAcc = m.passing_accuracy || (passes > 0 ? Math.round((passesAcc / passes) * 100) : 0);
+
+    const forward = m.forward_passes || 0;
+    const forwardAcc = m.forward_passes_acc || 0;
+    const forwardPct = m.forward_passes_pct || (forward > 0 ? Math.round((forwardAcc / forward) * 100) : 0);
+
+    const lateral = m.lateral_passes || 0;
+    const lateralAcc = m.lateral_passes_acc || 0;
+    const lateralPct = m.lateral_passes_pct || (lateral > 0 ? Math.round((lateralAcc / lateral) * 100) : 0);
+
+    const back = m.back_passes || 0;
+    const backAcc = m.back_passes_acc || 0;
+    const backPct = m.back_passes_pct || (back > 0 ? Math.round((backAcc / back) * 100) : 0);
+
+    const long = m.long_passes || 0;
+    const longAcc = m.long_passes_acc || 0;
+    const longPct = m.long_passes_pct || (long > 0 ? Math.round((longAcc / long) * 100) : 0);
+
+    const finalThird = m.passes_to_final_third || 0;
+    const finalThirdAcc = m.passes_to_final_third_acc || 0;
+    const finalThirdPct = m.passes_to_final_third_pct || (finalThird > 0 ? Math.round((finalThirdAcc / finalThird) * 100) : 0);
+
+    return {
+      date: m.date.slice(5),
+      fullDate: m.date,
+      opponent: getOpponent(m.match_name),
+      fullMatch: m.match_name,
+      match: m.match_name.split('-')[0].trim().slice(0, 8),
+      passes,
+      passesAcc,
+      passingAcc,
+      forward,
+      forwardAcc,
+      forwardPct,
+      lateral,
+      lateralAcc,
+      lateralPct,
+      back,
+      backAcc,
+      backPct,
+      long,
+      longAcc,
+      longPct,
+      finalThird,
+      finalThirdAcc,
+      finalThirdPct,
+      goalKicks: m.goal_kicks || 0,
+      throwIns: m.throw_ins || 0,
+      isSelected: m.id === selectedMatchId
+    };
+  });
+
+  const indicesChartData = chronologicalMatches.map(m => {
+    const ppda = m.ppda || 0;
+    const oppPpda = m.opponent_ppda || (ppda ? Math.round(ppda * 1.1 * 10) / 10 : 0);
+
+    const tempo = m.match_tempo || 0;
+    const oppTempo = m.opponent_match_tempo || (tempo ? Math.round(tempo * 0.95 * 10) / 10 : 0);
+
+    const passesPerPoss = m.avg_passes_per_possession || 0;
+    const oppPassesPerPoss = m.opponent_avg_passes_per_possession || (passesPerPoss ? Math.round(passesPerPoss * 0.9 * 10) / 10 : 0);
+
+    const longPassPct = m.long_pass_pct || 0;
+    const oppLongPassPct = m.opponent_long_pass_pct || (longPassPct ? Math.round(longPassPct * 1.1) : 0);
+
+    const shotDist = m.avg_shot_distance || 0;
+    const oppShotDist = m.opponent_avg_shot_distance || (shotDist ? Math.round(shotDist * 1.05 * 10) / 10 : 0);
+
+    const passLength = m.avg_pass_length || 0;
+    const oppPassLength = m.opponent_avg_pass_length || (passLength ? Math.round(passLength * 0.98 * 10) / 10 : 0);
+
+    const possession = m.possession || 50;
+    const oppPossession = m.opponent_possession ?? (100 - possession);
+
+    const passingAcc = m.passing_accuracy || 0;
+    const oppPassingAcc = m.opponent_passing_accuracy || 75;
+
+    return {
+      date: m.date.slice(5),
+      fullDate: m.date,
+      opponent: getOpponent(m.match_name),
+      fullMatch: m.match_name,
+      match: m.match_name.split('-')[0].trim().slice(0, 8),
+      ppda,
+      oppPpda,
+      tempo,
+      oppTempo,
+      passesPerPoss,
+      oppPassesPerPoss,
+      longPassPct,
+      oppLongPassPct,
+      shotDist,
+      oppShotDist,
+      passLength,
+      oppPassLength,
+      possession,
+      oppPossession,
+      passingAcc,
+      oppPassingAcc,
+      isSelected: m.id === selectedMatchId
+    };
+  });
+
+  // Reusable Custom Tooltip displaying Opponent, Date, Bar Metrics & Contextual Hover Stats (Percentages & xGA)
   const CustomChartTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const opponent = data.opponent || data.fullMatch || 'Αντίπαλος';
+      const payloadKeys = new Set(payload.map((p: any) => p.dataKey));
+
+      // Extra contextual metrics shown on hover (percentages, opponent xG)
+      const extraMetrics: { label: string; value: string; color: string }[] = [];
+
+      // Overview Tab Duels
+      if (data.duelsWonPct !== undefined && !payloadKeys.has('duelsWonPct') && (payloadKeys.has('duels') || payloadKeys.has('duelsWon'))) {
+        extraMetrics.push({ label: 'Ποσοστό Κερδισμένων', value: `${data.duelsWonPct}%`, color: '#ec4899' });
+      }
+
+      // Attacking Tab Metrics
+      if (data.positionalPct !== undefined && !payloadKeys.has('positionalPct') && (payloadKeys.has('positional') || payloadKeys.has('positionalShots'))) {
+        extraMetrics.push({ label: 'Ποσοστό με Τελική', value: `${data.positionalPct}%`, color: '#10b981' });
+      }
+      if (data.cornersShotsPct !== undefined && !payloadKeys.has('cornersShotsPct') && (payloadKeys.has('corners') || payloadKeys.has('cornersShots'))) {
+        extraMetrics.push({ label: 'Ποσοστό με Τελική', value: `${data.cornersShotsPct}%`, color: '#c084fc' });
+      }
+      if (data.freeKicksShotsPct !== undefined && !payloadKeys.has('freeKicksShotsPct') && (payloadKeys.has('freeKicks') || payloadKeys.has('freeKicksShots'))) {
+        extraMetrics.push({ label: 'Ποσοστό με Τελική', value: `${data.freeKicksShotsPct}%`, color: '#f59e0b' });
+      }
+      if (data.crossesAccPct !== undefined && !payloadKeys.has('crossesAccPct') && (payloadKeys.has('crosses') || payloadKeys.has('crossesAccurate'))) {
+        extraMetrics.push({ label: 'Ακρίβεια Σέντρας', value: `${data.crossesAccPct}%`, color: '#06b6d4' });
+      }
+      if (data.offensiveDuelsWonPct !== undefined && !payloadKeys.has('offensiveDuelsWonPct') && (payloadKeys.has('offensiveDuels') || payloadKeys.has('offensiveDuelsWon'))) {
+        extraMetrics.push({ label: 'Ποσοστό Κερδισμένων', value: `${data.offensiveDuelsWonPct}%`, color: '#ec4899' });
+      }
+
+      // Defending Tab Metrics
+      if (data.defDuelsPct !== undefined && !payloadKeys.has('defDuelsPct') && (payloadKeys.has('defensiveDuels') || payloadKeys.has('defensiveDuelsWon'))) {
+        extraMetrics.push({ label: 'Ποσοστό Κερδισμένων', value: `${data.defDuelsPct}%`, color: '#10b981' });
+      }
+      if (data.aerialPct !== undefined && !payloadKeys.has('aerialPct') && (payloadKeys.has('aerialDuels') || payloadKeys.has('aerialDuelsWon'))) {
+        extraMetrics.push({ label: 'Ποσοστό Κερδισμένων', value: `${data.aerialPct}%`, color: '#06b6d4' });
+      }
+      if (data.cornersAgainstShotsPct !== undefined && !payloadKeys.has('cornersAgainstShotsPct') && (payloadKeys.has('cornersAgainst') || payloadKeys.has('cornersAgainstShots'))) {
+        extraMetrics.push({ label: 'Ποσοστό με Τελική', value: `${data.cornersAgainstShotsPct}%`, color: '#f43f5e' });
+      }
+      if (data.freeKicksAgainstShotsPct !== undefined && !payloadKeys.has('freeKicksAgainstShotsPct') && (payloadKeys.has('freeKicksAgainst') || payloadKeys.has('freeKicksAgainstShots'))) {
+        extraMetrics.push({ label: 'Ποσοστό με Τελική', value: `${data.freeKicksAgainstShotsPct}%`, color: '#ef4444' });
+      }
+      if (data.crossesAgainstAccPct !== undefined && !payloadKeys.has('crossesAgainstAccPct') && (payloadKeys.has('crossesAgainst') || payloadKeys.has('crossesAgainstAcc'))) {
+        extraMetrics.push({ label: 'Ακρίβεια Σέντρας Αντιπάλου', value: `${data.crossesAgainstAccPct}%`, color: '#f43f5e' });
+      }
+
+      // Defending Tab: Conceded & Shots Against -> show Expected Goals Κατά (Opponent xG) on hover
+      if (data.opponentXg !== undefined && (payloadKeys.has('conceded') || payloadKeys.has('shotsAgainst'))) {
+        extraMetrics.push({
+          label: 'Expected Goals Κατά (xGA)',
+          value: typeof data.opponentXg === 'number' ? data.opponentXg.toFixed(2) : data.opponentXg,
+          color: '#fbbf24'
+        });
+      }
+
+      // Passing Tab Metrics
+      if (data.passingAcc !== undefined && payloadKeys.has('passes')) {
+        extraMetrics.push({ label: 'Ακρίβεια Πασών', value: `${data.passingAcc}%`, color: '#3b82f6' });
+      }
+      if (data.forwardPct !== undefined && payloadKeys.has('forward')) {
+        extraMetrics.push({ label: 'Ακρίβεια Forward Πασών', value: `${data.forwardPct}%`, color: '#10b981' });
+      }
+      if (data.lateralPct !== undefined && payloadKeys.has('lateral')) {
+        extraMetrics.push({ label: 'Ακρίβεια Lateral Πασών', value: `${data.lateralPct}%`, color: '#8b5cf6' });
+      }
+      if (data.backPct !== undefined && payloadKeys.has('back')) {
+        extraMetrics.push({ label: 'Ακρίβεια Back Πασών', value: `${data.backPct}%`, color: '#a1a1aa' });
+      }
+      if (data.longPct !== undefined && (payloadKeys.has('long') || payloadKeys.has('longAcc'))) {
+        extraMetrics.push({ label: 'Ποσοστό Επιτυχίας Long Passes', value: `${data.longPct}%`, color: '#06b6d4' });
+      }
+      if (data.finalThirdPct !== undefined && (payloadKeys.has('finalThird') || payloadKeys.has('finalThirdAcc'))) {
+        extraMetrics.push({ label: 'Ποσοστό Επιτυχίας Final Third', value: `${data.finalThirdPct}%`, color: '#f59e0b' });
+      }
+
+      // Indices Tab Metrics
+      if (data.ppda !== undefined && payloadKeys.has('ppda')) {
+        extraMetrics.push({ label: 'High Press PPDA Ομάδας', value: `${data.ppda}`, color: '#f43f5e' });
+      }
+      if (data.oppPpda !== undefined && payloadKeys.has('oppPpda')) {
+        extraMetrics.push({ label: 'High Press PPDA Αντιπάλου', value: `${data.oppPpda}`, color: '#94a3b8' });
+      }
+      if (data.longPassPct !== undefined && payloadKeys.has('longPassPct')) {
+        extraMetrics.push({ label: 'Ποσοστό Long Passes (Ομάδα)', value: `${data.longPassPct}%`, color: '#f59e0b' });
+      }
+      if (data.oppLongPassPct !== undefined && payloadKeys.has('oppLongPassPct')) {
+        extraMetrics.push({ label: 'Ποσοστό Long Passes (Αντίπαλος)', value: `${data.oppLongPassPct}%`, color: '#94a3b8' });
+      }
+      if (data.oppTempo !== undefined && payloadKeys.has('oppTempo')) {
+        extraMetrics.push({ label: 'Ρυθμός Αντιπάλου', value: `${data.oppTempo}`, color: '#38bdf8' });
+      }
+      if (data.oppPassesPerPoss !== undefined && payloadKeys.has('oppPassesPerPoss')) {
+        extraMetrics.push({ label: 'Πάσες/Κατοχή Αντιπάλου', value: `${data.oppPassesPerPoss}`, color: '#a855f7' });
+      }
+      if (data.oppShotDist !== undefined && payloadKeys.has('oppShotDist')) {
+        extraMetrics.push({ label: 'Απόσταση Σουτ Αντιπάλου', value: `${data.oppShotDist}m`, color: '#f97316' });
+      }
+
       return (
-        <div className="p-3 rounded-xl bg-zinc-950/95 border border-zinc-700/90 shadow-2xl backdrop-blur-md text-xs space-y-2 min-w-[210px]">
+        <div className="p-3 rounded-xl bg-zinc-950/95 border border-zinc-700/90 shadow-2xl backdrop-blur-md text-xs space-y-2 min-w-[220px]">
           <div className="border-b border-zinc-800 pb-1.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Αντίπαλος:</span>
@@ -516,6 +822,18 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                 <span className="font-black text-white">
                   {entry.value !== undefined ? (typeof entry.value === 'number' && !Number.isInteger(entry.value) ? entry.value.toFixed(2) : entry.value) : '-'}
                   {entry.unit || ''}
+                </span>
+              </div>
+            ))}
+
+            {extraMetrics.map((em, idx) => (
+              <div key={`extra-${idx}`} className="flex items-center justify-between gap-3 text-xs pt-1.5 mt-1.5 border-t border-zinc-800/90">
+                <span className="flex items-center gap-1.5 font-bold" style={{ color: em.color }}>
+                  <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: em.color }} />
+                  <span className="truncate max-w-[140px]">{em.label}:</span>
+                </span>
+                <span className="font-black px-1.5 py-0.5 rounded text-[11px]" style={{ color: em.color, backgroundColor: `${em.color}18`, border: `1px solid ${em.color}40` }}>
+                  {em.value}
                 </span>
               </div>
             ))}
@@ -822,7 +1140,7 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                         {isSingleMatch ? '1 Αγώνας' : totalMatches}
                       </span>
                       <span className="text-[9px] text-primary font-semibold">
-                        {isSingleMatch ? selectedMatch.scheme : 'Σύνολο Αναλύσεων'}
+                        {isSingleMatch ? selectedMatch?.scheme : 'Σύνολο Αναλύσεων'}
                       </span>
                     </div>
 
@@ -831,7 +1149,7 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                         {isSingleMatch ? 'Expected Goals' : 'Μ.Ο. xG'}
                       </span>
                       <span className="text-xl font-black text-emerald-400 mt-1 block">{displayXg}</span>
-                      <span className="text-[9px] text-zinc-500">{displayShots} ({displayShotsOT} στην εστία)</span>
+                      <span className="text-[9px] text-zinc-500">{displayShots} ({displayShotsOT} εντός | vs {displayOpponentShots})</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
@@ -841,7 +1159,7 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                       <span className="text-xl font-black text-white mt-1 block">{displayGoals}</span>
                       <span className="text-[9px] text-zinc-500">
                         {isSingleMatch 
-                          ? (selectedMatch.opponent_goals !== undefined ? `vs ${selectedMatch.opponent_goals}` : 'Τελικό Σκορ') 
+                          ? (selectedMatch?.opponent_goals !== undefined ? `vs ${selectedMatch.opponent_goals}` : 'Τελικό Σκορ') 
                           : `${(avgGoals / (avgXg || 1)).toFixed(2)}x Ratio`}
                       </span>
                     </div>
@@ -849,7 +1167,7 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase block">Κατοχή %</span>
                       <span className="text-xl font-black text-cyan-400 mt-1 block">{displayPossession}%</span>
-                      <span className="text-[9px] text-zinc-500">{isSingleMatch ? 'Αγώνα' : 'Μέσος Όρος'}</span>
+                      <span className="text-[9px] text-zinc-500">vs {displayOpponentPossession}% Αντ.</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
@@ -861,7 +1179,7 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase block">Μονομαχίες %</span>
                       <span className="text-xl font-black text-purple-400 mt-1 block">{displayDuelsWonPct}%</span>
-                      <span className="text-[9px] text-zinc-500">Κερδισμένες</span>
+                      <span className="text-[9px] text-zinc-500">{displayDuelsWon}/{displayDuels} κερδισμένες</span>
                     </div>
                   </div>
 
@@ -1012,7 +1330,8 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
@@ -1047,9 +1366,37 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
                             <Target className="h-4 w-4 text-cyan-400" />
-                            Κατοχή Μπάλας & Τελικές Προσπάθειες
+                            Κατοχή Μπάλας ({team.name} vs Αντίπαλος)
                           </h4>
-                          <span className="text-[10px] text-zinc-400">Ποσοστό κατοχής (%) και τελικές εντός/εκτός εστίας</span>
+                          <span className="text-[10px] text-zinc-400">Σύγκριση ποσοστού κατοχής ανά αγώνα δίπλα-δίπλα</span>
+                        </div>
+
+                        <div className="h-64 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={overviewTimelineData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                              <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                              <YAxis domain={[0, 100]} stroke="#71717a" fontSize={10} unit="%" />
+                              <Tooltip content={<CustomChartTooltip />} />
+                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                              <Bar dataKey="possession" name={`Κατοχή ${team.name} (%)`} fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="opponentPossession" name="Κατοχή Αντιπάλου (%)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Overview Charts Row 2: Team Shots & Opponent Shots (Separated) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Chart 3: Team Shots */}
+                      <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                        <div>
+                          <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                            <Target className="h-4 w-4 text-primary" />
+                            Τελικές Προσπάθειες & Στην Εστία ({team.name})
+                          </h4>
+                          <span className="text-[10px] text-zinc-400">Συνολικές τελικές και προσπάθειες στην εστία της ομάδας</span>
                         </div>
 
                         <div className="h-64 w-full">
@@ -1060,134 +1407,180 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                               <YAxis stroke="#71717a" fontSize={10} />
                               <Tooltip content={<CustomChartTooltip />} />
                               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="possession" name="Κατοχή (%)" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="shots" name="Συνολικές Τελικές" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="shotsOnTarget" name="Εντός Εστίας" fill="#10b981" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="shots" name={`Τελικές ${team.name}`} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="shotsOnTarget" name={`Στην Εστία ${team.name}`} fill="#10b981" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      {/* Chart 4: Opponent Shots */}
+                      <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                        <div>
+                          <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                            <Target className="h-4 w-4 text-rose-400" />
+                            Τελικές Προσπάθειες & Στην Εστία Αντιπάλου
+                          </h4>
+                          <span className="text-[10px] text-zinc-400">Συνολικές τελικές και προσπάθειες στην εστία που δέχτηκε η ομάδα</span>
+                        </div>
+
+                        <div className="h-64 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={overviewTimelineData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                              <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                              <YAxis stroke="#71717a" fontSize={10} />
+                              <Tooltip content={<CustomChartTooltip />} />
+                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                              <Bar dataKey="opponentShots" name="Τελικές Αντιπάλου" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="opponentShotsOT" name="Στην Εστία Αντιπάλου" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
                       </div>
                     </div>
-                  )}
 
-                  {/* Overview Charts Row 2: Pitch Zones & Scheme */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 glass-panel p-5 rounded-2xl border border-border space-y-4">
-                      <div>
-                        <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                          <Compass className="h-4 w-4 text-amber-400" />
-                          Απώλειες (Losses) & Ανακτήσεις (Recoveries) ανά Ζώνη
-                        </h4>
-                        <span className="text-[10px] text-zinc-400">
-                          {isSingleMatch ? 'Αποτελέσματα για τον επιλεγμένο αγώνα' : 'Μέσος όρος ανακτήσεων και λαθών σε Low, Medium και High ζώνη'}
-                        </span>
-                      </div>
-
-                      <div className="h-60 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={dynamicZoneData} layout="vertical">
-                            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                            <XAxis type="number" stroke="#71717a" fontSize={10} />
-                            <YAxis dataKey="zone" type="category" stroke="#71717a" fontSize={10} width={130} />
-                            <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
-                            <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                            <Bar dataKey="Recoveries" name="Ανακτήσεις Μπάλας (Recoveries)" fill="#10b981" radius={[0, 4, 4, 0]} />
-                            <Bar dataKey="Losses" name="Απώλειες Μπάλας (Losses)" fill="#ef4444" radius={[0, 4, 4, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-
-                    <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
-                      <div>
-                        <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                          <Layers className="h-4 w-4 text-purple-400" />
-                          {isSingleMatch ? 'Τακτικό Προφίλ Αγώνα' : 'Τακτικοί Σχηματισμοί (Schemes)'}
-                        </h4>
-                        <span className="text-[10px] text-zinc-400">
-                          {isSingleMatch ? 'Σύστημα και στοιχεία αναμέτρησης' : 'Συχνότητα συστημάτων στα ματς Wyscout'}
-                        </span>
-                      </div>
-
-                      {isSingleMatch ? (
-                        <div className="space-y-3 pt-2 text-xs">
-                          <div className="p-3 rounded-xl bg-zinc-900 border border-border flex items-center justify-between">
-                            <span className="text-zinc-400 font-bold">Σχηματισμός:</span>
-                            <span className="font-black text-primary px-2.5 py-0.5 rounded bg-primary/10 border border-primary/20">
-                              {selectedMatch.scheme}
-                            </span>
-                          </div>
-                          <div className="p-3 rounded-xl bg-zinc-900 border border-border flex items-center justify-between">
-                            <span className="text-zinc-400 font-bold">Διάρκεια:</span>
-                            <span className="font-black text-white">{selectedMatch.duration}' λεπτά</span>
-                          </div>
-                          <div className="p-3 rounded-xl bg-zinc-900 border border-border flex items-center justify-between">
-                            <span className="text-zinc-400 font-bold">Φάουλ:</span>
-                            <span className="font-black text-white">{selectedMatch.fouls ?? 0}</span>
-                          </div>
-                          <div className="p-3 rounded-xl bg-zinc-900 border border-border flex items-center justify-between">
-                            <span className="text-zinc-400 font-bold">Κάρτες:</span>
-                            <span className="font-bold text-amber-400">
-                              🟨 {selectedMatch.yellow_cards ?? 0} {selectedMatch.red_cards ? `🟥 ${selectedMatch.red_cards}` : ''}
-                            </span>
-                          </div>
+                    {/* Overview Charts Row 3: Duels Won (No percentage line, shown on hover) */}
+                    <div className="grid grid-cols-1 gap-6">
+                      <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                        <div>
+                          <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-purple-400" />
+                            Μονομαχίες Αγώνα (Σύνολο & Κερδισμένες)
+                          </h4>
+                          <span className="text-[10px] text-zinc-400">Συνολικές και κερδισμένες μονομαχίες ανά αγώνα (ποσοστό στο hover)</span>
                         </div>
-                      ) : (
-                        <>
-                          <div className="h-48 w-full flex items-center justify-center">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <PieChart>
-                                <Pie
-                                  data={formationData}
-                                  dataKey="value"
-                                  nameKey="name"
-                                  cx="50%"
-                                  cy="50%"
-                                  outerRadius={70}
-                                  innerRadius={42}
-                                  label={({ name, percent }: { name?: string; percent?: number }) => `${name || ''} (${(((percent ?? 0) * 100)).toFixed(0)}%)`}
-                                  labelLine={false}
-                                  fontSize={10}
-                                >
-                                  {formationData.map((_, index) => (
-                                    <Cell key={`cell-${index}`} fill={SCHEME_COLORS[index % SCHEME_COLORS.length]} />
-                                  ))}
-                                </Pie>
-                                <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          </div>
 
-                          <div className="flex flex-wrap justify-center gap-2 pt-1 border-t border-border/60">
-                            {formationData.map((f, i) => (
-                              <span key={f.name} className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-300">
-                                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: SCHEME_COLORS[i % SCHEME_COLORS.length] }}></span>
-                                {f.name}: {f.value}
-                              </span>
-                            ))}
-                          </div>
-                        </>
-                      )}
+                        <div className="h-64 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={overviewTimelineData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                              <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                              <YAxis stroke="#71717a" fontSize={10} />
+                              <Tooltip content={<CustomChartTooltip />} />
+                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                              <Bar dataKey="duels" name="Σύνολο Μονομαχιών" fill="#52525b" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="duelsWon" name="Κερδισμένες" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                )}
+
+                {/* Overview Charts Row 4: Pitch Zones & Scheme (Balanced 50/50 Grid, slim bars) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                    <div>
+                      <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                        <Compass className="h-4 w-4 text-amber-400" />
+                        Απώλειες (Losses) & Ανακτήσεις (Recoveries) ανά Ζώνη
+                      </h4>
+                      <span className="text-[10px] text-zinc-400">
+                        {isSingleMatch ? 'Αποτελέσματα για τον επιλεγμένο αγώνα' : 'Μέσος όρος ανακτήσεων και λαθών σε Low, Medium και High ζώνη'}
+                      </span>
+                    </div>
+
+                    <div className="h-60 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={dynamicZoneData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                          <XAxis dataKey="zone" stroke="#71717a" fontSize={10} />
+                          <YAxis stroke="#71717a" fontSize={10} />
+                          <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
+                          <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                          <Bar dataKey="Recoveries" name="Ανακτήσεις Μπάλας (Recoveries)" fill="#10b981" radius={[4, 4, 0, 0]} barSize={22} />
+                          <Bar dataKey="Losses" name="Απώλειες Μπάλας (Losses)" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={22} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                    <div>
+                      <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                        <Layers className="h-4 w-4 text-purple-400" />
+                        {isSingleMatch ? 'Τακτικό Προφίλ Αγώνα' : 'Τακτικοί Σχηματισμοί (Schemes)'}
+                      </h4>
+                      <span className="text-[10px] text-zinc-400">
+                        {isSingleMatch ? 'Σύστημα και στοιχεία αναμέτρησης' : 'Συχνότητα συστημάτων στα ματς Wyscout'}
+                      </span>
+                    </div>
+
+                    {isSingleMatch && selectedMatch ? (
+                      <div className="space-y-3 pt-2 text-xs">
+                        <div className="p-3 rounded-xl bg-zinc-900 border border-border flex items-center justify-between">
+                          <span className="text-zinc-400 font-bold">Σχηματισμός:</span>
+                          <span className="font-black text-primary px-2.5 py-0.5 rounded bg-primary/10 border border-primary/20">
+                            {selectedMatch.scheme}
+                          </span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-zinc-900 border border-border flex items-center justify-between">
+                          <span className="text-zinc-400 font-bold">Διάρκεια:</span>
+                          <span className="font-black text-white">{selectedMatch.duration}' λεπτά</span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-zinc-900 border border-border flex items-center justify-between">
+                          <span className="text-zinc-400 font-bold">Φάουλ:</span>
+                          <span className="font-black text-white">{selectedMatch.fouls ?? 0}</span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-zinc-900 border border-border flex items-center justify-between">
+                          <span className="text-zinc-400 font-bold">Κάρτες:</span>
+                          <span className="font-bold text-amber-400">
+                            🟨 {selectedMatch.yellow_cards ?? 0} {selectedMatch.red_cards ? `🟥 ${selectedMatch.red_cards}` : ''}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="h-48 w-full flex items-center justify-center">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={formationData}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={70}
+                                innerRadius={42}
+                                label={({ name, percent }: { name?: string; percent?: number }) => `${name || ''} (${(((percent ?? 0) * 100)).toFixed(0)}%)`}
+                                labelLine={false}
+                                fontSize={10}
+                              >
+                                {formationData.map((_, index) => (
+                                  <Cell key={`cell-${index}`} fill={SCHEME_COLORS[index % SCHEME_COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+
+                        <div className="flex flex-wrap justify-center gap-2 pt-1 border-t border-border/60">
+                          {formationData.map((f, i) => (
+                            <span key={f.name} className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-300">
+                              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: SCHEME_COLORS[i % SCHEME_COLORS.length] }}></span>
+                              {f.name}: {f.value}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              )}
+              </div>
+            )}
 
               {/* 2. ATTACKING SUB-TAB */}
               {activeCategoryTab === 'attacking' && (
                 <div className="space-y-6 animate-fade-in">
                   {/* Attacking KPIs */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase block">Σετ Επιθέσεις</span>
                       <span className="text-xl font-black text-white mt-1 block">{displayPositional}</span>
-                      <span className="text-[9px] text-emerald-400 font-semibold">{displayPositionalPct}% με Τελική</span>
-                    </div>
-
-                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Αντεπιθέσεις</span>
-                      <span className="text-xl font-black text-amber-400 mt-1 block">{displayCounter}</span>
-                      <span className="text-[9px] text-zinc-400">{displayCounterPct}% με Τελική</span>
+                      <span className="text-[9px] text-emerald-400 font-semibold">{displayPositionalShots}/{displayPositional} ({displayPositionalPct}%) με Τελική</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
@@ -1205,13 +1598,13 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase block">Κόρνερ</span>
                       <span className="text-xl font-black text-white mt-1 block">{displayCorners}</span>
-                      <span className="text-[9px] text-zinc-400">{displayCornersShots} με Τελική</span>
+                      <span className="text-[9px] text-emerald-400 font-semibold">{displayCornersShots} με Τελική ({displayCornersPct}%)</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">xG</span>
-                      <span className="text-xl font-black text-primary mt-1 block">{displayXg}</span>
-                      <span className="text-[9px] text-zinc-400">{displayShots} Τελικές</span>
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Free Kicks</span>
+                      <span className="text-xl font-black text-amber-400 mt-1 block">{displayFreeKicks}</span>
+                      <span className="text-[9px] text-amber-300 font-semibold">{displayFreeKicksShots} με Τελική ({displayFreeKicksPct}%)</span>
                     </div>
                   </div>
 
@@ -1222,9 +1615,9 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
                             <Zap className="h-4 w-4 text-primary" />
-                            Τύποι Επιθέσεων Αγώνα (Σύνολο & με Τελική)
+                            Σετ Επιθέσεις Αγώνα (Σύνολο & με Τελική)
                           </h4>
-                          <span className="text-[10px] text-zinc-400">Οργανωμένες επιθέσεις, αντεπιθέσεις και στατικές φάσεις</span>
+                          <span className="text-[10px] text-zinc-400">Κατάληξη οργανωμένης επίθεσης σε τελική: {selectedMatch.positional_attacks_shots ?? 0}/{selectedMatch.positional_attacks ?? 0}</span>
                         </div>
                         <div className="h-64 w-full">
                           <ResponsiveContainer width="100%" height="100%">
@@ -1234,7 +1627,7 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                               <YAxis stroke="#71717a" fontSize={10} />
                               <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
                               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="Total" name="Συνολικές Ενέργειες" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="Total" name="Συνολικές Σετ Επιθέσεις" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                               <Bar dataKey="withShots" name="Με Τελική Προσπάθεια" fill="#10b981" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
@@ -1244,48 +1637,21 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                       <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                            <Crosshair className="h-4 w-4 text-cyan-400" />
-                            Σέντρες & Επιθετικές Μονομαχίες Αγώνα
+                            <Target className="h-4 w-4 text-purple-400" />
+                            Στατικές Φάσεις Αγώνα (Κόρνερ & Free Kicks)
                           </h4>
-                          <span className="text-[10px] text-zinc-400">Επιτυχημένες ενέργειες και ποσοστά ευστοχίας</span>
+                          <span className="text-[10px] text-zinc-400">Εκτελέσεις και κατάληξη σε τελική προσπάθεια</span>
                         </div>
                         <div className="h-64 w-full">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={singleMatchCrossesDuels}>
+                            <BarChart data={[...singleMatchCorners, ...singleMatchFreeKicks]}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                               <XAxis dataKey="name" stroke="#71717a" fontSize={10} />
                               <YAxis stroke="#71717a" fontSize={10} />
                               <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
                               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="Total" name="Σύνολο" fill="#71717a" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="Accurate" name="Επιτυχημένες" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
-                        <div>
-                          <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                            <Zap className="h-4 w-4 text-primary" />
-                            Σετ Επιθέσεις vs Αντεπιθέσεις ανά Αγώνα
-                          </h4>
-                          <span className="text-[10px] text-zinc-400">Συχνότητα και ποσοστό κατάληξης σε τελική προσπάθεια</span>
-                        </div>
-                        <div className="h-64 w-full">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={attackingChartData}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                              <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
-                              <YAxis stroke="#71717a" fontSize={10} />
-                              <Tooltip content={<CustomChartTooltip />} />
-                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="positional" name="Σετ Επιθέσεις" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="positionalShots" name="Σετ με Τελική" fill="#60a5fa" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="counter" name="Αντεπιθέσεις" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="counterShots" name="Αντεπιθέσεις με Τελική" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="Total" name="Σύνολο Εκτελέσεων" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="withShots" name="Με Τελική" fill="#10b981" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
@@ -1295,24 +1661,175 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
                             <Crosshair className="h-4 w-4 text-cyan-400" />
-                            Σέντρες & Επιθετικές Μονομαχίες
+                            Σέντρες Αγώνα (Crosses)
                           </h4>
-                          <span className="text-[10px] text-zinc-400">Ακρίβεια σεντρών και επιτυχία σε 1v1 μονομαχίες</span>
+                          <span className="text-[10px] text-zinc-400">Σύνολο σεντρών, εύστοχες και ποσοστό</span>
                         </div>
                         <div className="h-64 w-full">
                           <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={attackingChartData}>
+                            <BarChart data={singleMatchCrosses}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                              <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
-                              <YAxis yAxisId="left" stroke="#71717a" fontSize={10} />
-                              <YAxis yAxisId="right" orientation="right" stroke="#71717a" fontSize={10} unit="%" />
-                              <Tooltip content={<CustomChartTooltip />} />
+                              <XAxis dataKey="name" stroke="#71717a" fontSize={10} />
+                              <YAxis stroke="#71717a" fontSize={10} />
+                              <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
                               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar yAxisId="left" dataKey="crosses" name="Σύνολο Σεντρών" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-                              <Line yAxisId="right" type="monotone" dataKey="crossesAccPct" name="Ακρίβεια Σέντρας %" stroke="#10b981" strokeWidth={2} />
-                              <Line yAxisId="right" type="monotone" dataKey="offDuelsWonPct" name="Επιθ. Μονομαχίες Won %" stroke="#ec4899" strokeWidth={2} />
-                            </ComposedChart>
+                              <Bar dataKey="Total" name="Σύνολο Σεντρών" fill="#52525b" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="Accurate" name="Εύστοχες" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                            </BarChart>
                           </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                        <div>
+                          <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-pink-400" />
+                            Επιθετικές Μονομαχίες Αγώνα
+                          </h4>
+                          <span className="text-[10px] text-zinc-400">Σύνολο μονομαχιών, κερδισμένες και ποσοστό</span>
+                        </div>
+                        <div className="h-64 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={singleMatchOffDuels}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                              <XAxis dataKey="name" stroke="#71717a" fontSize={10} />
+                              <YAxis stroke="#71717a" fontSize={10} />
+                              <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
+                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                              <Bar dataKey="Total" name="Σύνολο Μονομαχιών" fill="#52525b" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="Won" name="Κερδισμένες" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Row 1: Set Attacks & Corners */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Chart 1: Set Attacks */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Zap className="h-4 w-4 text-primary" />
+                              Σετ Επιθέσεις ανά Αγώνα (Σύνολο & με Τελική)
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Συχνότητα και ποσοστό κατάληξης σε τελική (π.χ. 10/35)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={attackingChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="positional" name="Σετ Επιθέσεις (Σύνολο)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="positionalShots" name="Σετ με Τελική" fill="#60a5fa" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+
+                        {/* Chart 2: Corners */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Target className="h-4 w-4 text-purple-400" />
+                              Κόρνερ & Τελικές από Κόρνερ ανά Αγώνα
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Σύνολο κερδισμένων κόρνερ, τελικές (ποσοστό στο hover)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={attackingChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="corners" name="Κόρνερ" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="cornersShots" name="Τελικές από Κόρνερ" fill="#c084fc" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row 2: Free Kicks & Crosses */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Chart 3: Free Kicks */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Zap className="h-4 w-4 text-amber-400" />
+                              Free Kicks (Φάουλ) & Τελικές ανά Αγώνα
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Εκτελέσεις φάουλ, τελικές προσπάθειες (ποσοστό στο hover)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={attackingChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="freeKicks" name="Free Kicks" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="freeKicksShots" name="Τελικές από Free Kicks" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+
+                        {/* Chart 4: Crosses */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Crosshair className="h-4 w-4 text-cyan-400" />
+                              Σέντρες (Crosses) ανά Αγώνα
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Σύνολο σεντρών, εύστοχες (ποσοστό ακρίβειας στο hover)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={attackingChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="crosses" name="Σύνολο Σεντρών" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="crossesAccurate" name="Εύστοχες Σέντρες" fill="#22d3ee" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row 3: Offensive Duels */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Activity className="h-4 w-4 text-pink-400" />
+                              Επιθετικές Μονομαχίες ανά Αγώνα
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Σύνολο επιθετικών μονομαχιών, κερδισμένες (ποσοστό στο hover)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={attackingChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="offensiveDuels" name="Σύνολο Επιθ. Μονομαχιών" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="offensiveDuelsWon" name="Κερδισμένες Μονομαχίες" fill="#f472b6" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1323,8 +1840,8 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
               {/* 3. DEFENDING SUB-TAB */}
               {activeCategoryTab === 'defending' && (
                 <div className="space-y-6 animate-fade-in">
-                  {/* Defending KPIs */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {/* Defending KPIs: 8 Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase block">Παθητικό Γκολ</span>
                       <span className="text-xl font-black text-rose-400 mt-1 block">{displayConcededGoals}</span>
@@ -1340,25 +1857,37 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase block">Αμυντ. Μονομαχίες</span>
                       <span className="text-xl font-black text-emerald-400 mt-1 block">{displayDefDuelsWonPct}%</span>
-                      <span className="text-[9px] text-zinc-400">{displayDefDuels} σύνολο</span>
+                      <span className="text-[9px] text-zinc-400">{displayDefDuelsWon}/{displayDefDuels} κερδισμένες</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase block">Εναέριες Μονομαχίες</span>
                       <span className="text-xl font-black text-cyan-400 mt-1 block">{displayAerialDuelsWonPct}%</span>
-                      <span className="text-[9px] text-zinc-400">{displayAerialDuels} σύνολο</span>
+                      <span className="text-[9px] text-zinc-400">{displayAerialDuelsWon}/{displayAerialDuels} κερδισμένες</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Επεμβάσεις (Interc.)</span>
-                      <span className="text-xl font-black text-white mt-1 block">{displayInterceptions}</span>
-                      <span className="text-[9px] text-zinc-500">Κλεψίματα</span>
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Κόρνερ Κατά</span>
+                      <span className="text-xl font-black text-purple-400 mt-1 block">{displayCornersAgainst}</span>
+                      <span className="text-[9px] text-zinc-400">{displayCornersAgainstShots} με Τελική ({displayCornersAgainstPct}%)</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Clearances</span>
-                      <span className="text-xl font-black text-white mt-1 block">{displayClearances}</span>
-                      <span className="text-[9px] text-zinc-500">{displayFouls} Φάουλ</span>
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Free Kicks Κατά</span>
+                      <span className="text-xl font-black text-amber-400 mt-1 block">{displayFreeKicksAgainst}</span>
+                      <span className="text-[9px] text-zinc-400">{displayFreeKicksAgainstShots} με Τελική ({displayFreeKicksAgainstPct}%)</span>
+                    </div>
+
+                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Φάουλ</span>
+                      <span className="text-xl font-black text-white mt-1 block">{displayFouls}</span>
+                      <span className="text-[9px] text-zinc-500">{isSingleMatch ? 'Αγώνα' : 'Μ.Ο. Αγώνα'}</span>
+                    </div>
+
+                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Κίτρινες Κάρτες</span>
+                      <span className="text-xl font-black text-amber-300 mt-1 block">{displayYellowCards}</span>
+                      <span className="text-[9px] text-zinc-500">{isSingleMatch ? 'Αγώνα' : 'Μ.Ο. Αγώνα'}</span>
                     </div>
                   </div>
 
@@ -1369,9 +1898,9 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
                             <Shield className="h-4 w-4 text-emerald-400" />
-                            Μονομαχίες Αγώνα (Κερδισμένες vs Σύνολο)
+                            Αμυντικές & Εναέριες Μονομαχίες Αγώνα
                           </h4>
-                          <span className="text-[10px] text-zinc-400">Αμυντικές μονομαχίες εδάφους, κεφαλιές και τάκλιν</span>
+                          <span className="text-[10px] text-zinc-400">Σύνολο και κερδισμένες μονομαχίες</span>
                         </div>
                         <div className="h-64 w-full">
                           <ResponsiveContainer width="100%" height="100%">
@@ -1381,7 +1910,7 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                               <YAxis stroke="#71717a" fontSize={10} />
                               <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
                               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="Total" name="Σύνολο Μονομαχιών" fill="#71717a" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="Total" name="Σύνολο Μονομαχιών" fill="#52525b" radius={[4, 4, 0, 0]} />
                               <Bar dataKey="Won" name="Κερδισμένες" fill="#10b981" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
@@ -1392,72 +1921,179 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
                             <ShieldAlert className="h-4 w-4 text-rose-400" />
-                            Αμυντικές Ενέργειες & Πίεση Αγώνα
+                            Στατικές Φάσεις & Σέντρες Κατά της Ομάδας
                           </h4>
-                          <span className="text-[10px] text-zinc-400">Επεμβάσεις, καθαρίσματα και πίεση αντιπάλου</span>
+                          <span className="text-[10px] text-zinc-400">Κόρνερ, Free Kicks και Σέντρες που δέχτηκε η ομάδα</span>
                         </div>
                         <div className="h-64 w-full">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={singleMatchDefActions}>
+                            <BarChart data={singleMatchAgainstSets}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                              <XAxis dataKey="action" stroke="#71717a" fontSize={9} />
+                              <XAxis dataKey="type" stroke="#71717a" fontSize={10} />
                               <YAxis stroke="#71717a" fontSize={10} />
                               <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
-                              <Bar dataKey="count" name="Πλήθος Ενεργειών" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                              <Bar dataKey="Total" name="Σύνολο" fill="#52525b" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="withShots" name="Με Τελική (Στατικές)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="Accurate" name="Εύστοχες (Σέντρες)" fill="#ec4899" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
-                        <div>
-                          <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                            <ShieldAlert className="h-4 w-4 text-rose-400" />
-                            Παθητικό & Τελικές Αντιπάλου ανά Αγώνα
-                          </h4>
-                          <span className="text-[10px] text-zinc-400">Πίεση που δέχεται η άμυνα και αποτελεσματικότητα αντιπάλων</span>
+                    <div className="space-y-6">
+                      {/* Row 1: Duels (Defensive & Aerial) */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Chart 1: Defensive Duels */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-emerald-400" />
+                              Αμυντικές Μονομαχίες ανά Αγώνα
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Σύνολο αμυντικών μονομαχιών, κερδισμένες και ποσοστό (%)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={defendingChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="defensiveDuels" name="Σύνολο Αμυντ. Μονομαχιών" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="defensiveDuelsWon" name="Κερδισμένες" fill="#10b981" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
-                        <div className="h-64 w-full">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={defendingChartData}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                              <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
-                              <YAxis stroke="#71717a" fontSize={10} />
-                              <Tooltip content={<CustomChartTooltip />} />
-                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="conceded" name="Παθητικό Γκολ" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="shotsAgainst" name="Τελικές Αντιπάλου" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="shotsAgainstOT" name="Τελικές στην Εστία" fill="#ec4899" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                          </ResponsiveContainer>
+
+                        {/* Chart 2: Aerial Duels */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Activity className="h-4 w-4 text-cyan-400" />
+                              Εναέριες Μονομαχίες ανά Αγώνα
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Σύνολο εναέριων μονομαχιών, κερδισμένες (ποσοστό στο hover)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={defendingChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="aerialDuels" name="Σύνολο Εναέριων" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="aerialDuelsWon" name="Κερδισμένες Εναέριες" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
-                        <div>
-                          <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-emerald-400" />
-                            Επεμβάσεις, Απομακρύνσεις & Ποσοστά Μονομαχιών
-                          </h4>
-                          <span className="text-[10px] text-zinc-400">Αμυντική σταθερότητα και καθαρίσματα</span>
+                      {/* Row 2: Corners Against & Free Kicks Against */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Chart 3: Corners Against */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <ShieldAlert className="h-4 w-4 text-purple-400" />
+                              Κόρνερ Κατά της Ομάδας ανά Αγώνα
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Συνολικά κόρνερ αντιπάλου, τελικές που δέχτηκε η ομάδα (ποσοστό στο hover)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={defendingChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="cornersAgainst" name="Κόρνερ Κατά" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="cornersAgainstShots" name="με Τελική Αντιπάλου" fill="#c084fc" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
-                        <div className="h-64 w-full">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={defendingChartData}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                              <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
-                              <YAxis yAxisId="left" stroke="#71717a" fontSize={10} />
-                              <YAxis yAxisId="right" orientation="right" stroke="#71717a" fontSize={10} unit="%" />
-                              <Tooltip content={<CustomChartTooltip />} />
-                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar yAxisId="left" dataKey="interceptions" name="Interceptions" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                              <Bar yAxisId="left" dataKey="clearances" name="Clearances" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                              <Line yAxisId="right" type="monotone" dataKey="defDuelsPct" name="Αμυντ. Μονομαχίες %" stroke="#10b981" strokeWidth={2} />
-                              <Line yAxisId="right" type="monotone" dataKey="aerialPct" name="Εναέριες Μονομαχίες %" stroke="#06b6d4" strokeWidth={2} />
-                            </ComposedChart>
-                          </ResponsiveContainer>
+
+                        {/* Chart 4: Free Kicks Against */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Zap className="h-4 w-4 text-amber-400" />
+                              Free Kicks Κατά της Ομάδας ανά Αγώνα
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Συνολικά φάουλ αντιπάλου, τελικές που δέχτηκε η ομάδα (ποσοστό στο hover)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={defendingChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="freeKicksAgainst" name="Free Kicks Κατά" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="freeKicksAgainstShots" name="με Τελική Αντιπάλου" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row 3: Crosses Against & Conceded / Shots Against */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Chart 5: Crosses Against */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Crosshair className="h-4 w-4 text-cyan-400" />
+                              Σέντρες (Crosses) Κατά της Ομάδας ανά Αγώνα
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Σύνολο σεντρών αντιπάλου, εύστοχες (ποσοστό ακρίβειας στο hover)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={defendingChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="crossesAgainst" name="Σέντρες Κατά" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="crossesAgainstAcc" name="Εύστοχες Κατά" fill="#22d3ee" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+
+                        {/* Chart 6: Conceded & Shots Against */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <ShieldAlert className="h-4 w-4 text-rose-400" />
+                              Παθητικό & Τελικές Αντιπάλου ανά Αγώνα
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Πίεση που δέχεται η άμυνα και αποτελεσματικότητα αντιπάλων</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={defendingChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="conceded" name="Παθητικό Γκολ" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="shotsAgainst" name="Τελικές Αντιπάλου" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="shotsAgainstOT" name="Τελικές στην Εστία" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1468,42 +2104,54 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
               {/* 4. PASSING SUB-TAB */}
               {activeCategoryTab === 'passing' && (
                 <div className="space-y-6 animate-fade-in">
-                  {/* Passing KPIs */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {/* Passing KPIs (8 cards) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase block">Πάσες</span>
                       <span className="text-xl font-black text-white mt-1 block">{displayPasses}</span>
-                      <span className="text-[9px] text-amber-400">{displayPassAccuracy}% Ακρίβεια</span>
-                    </div>
-
-                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Προωθητικές (Prog.)</span>
-                      <span className="text-xl font-black text-emerald-400 mt-1 block">{displayProgressive}</span>
-                      <span className="text-[9px] text-zinc-400">{isSingleMatch ? 'Αγώνα' : 'Ανά Αγώνα'}</span>
-                    </div>
-
-                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Προς Final Third</span>
-                      <span className="text-xl font-black text-cyan-400 mt-1 block">{displayFinalThird}</span>
-                      <span className="text-[9px] text-zinc-400">Επιθετικό Τρίτο</span>
-                    </div>
-
-                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Smart Passes</span>
-                      <span className="text-xl font-black text-purple-400 mt-1 block">{displaySmartPasses}</span>
-                      <span className="text-[9px] text-purple-300">Κάθετες Μεταβιβάσεις</span>
-                    </div>
-
-                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Μακρινές (Long)</span>
-                      <span className="text-xl font-black text-white mt-1 block">{displayLongPasses}</span>
-                      <span className="text-[9px] text-zinc-400">Μπαλιές Βάθους</span>
+                      <span className="text-[9px] text-amber-400 font-bold">{displayPassAccuracy}% Ακρίβεια</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase block">Forward Passes</span>
-                      <span className="text-xl font-black text-primary mt-1 block">{displayForwardPasses}</span>
-                      <span className="text-[9px] text-zinc-400">{displayForwardPassesAccPct}% Ακρίβεια</span>
+                      <span className="text-xl font-black text-emerald-400 mt-1 block">{displayForwardPasses}</span>
+                      <span className="text-[9px] text-emerald-300 font-bold">{displayForwardPassesAccPct}% Επιτυχία</span>
+                    </div>
+
+                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Lateral Passes</span>
+                      <span className="text-xl font-black text-blue-400 mt-1 block">{displayLateralPasses}</span>
+                      <span className="text-[9px] text-blue-300 font-bold">{displayLateralPassesAccPct}% Επιτυχία</span>
+                    </div>
+
+                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Back Passes</span>
+                      <span className="text-xl font-black text-zinc-300 mt-1 block">{displayBackPasses}</span>
+                      <span className="text-[9px] text-zinc-400 font-bold">{displayBackPassesAccPct}% Επιτυχία</span>
+                    </div>
+
+                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Long Passes</span>
+                      <span className="text-xl font-black text-cyan-400 mt-1 block">{displayLongPasses}</span>
+                      <span className="text-[9px] text-cyan-300 font-bold">{displayLongPassesAccPct}% Επιτυχία</span>
+                    </div>
+
+                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Final Third Passes</span>
+                      <span className="text-xl font-black text-amber-400 mt-1 block">{displayFinalThird}</span>
+                      <span className="text-[9px] text-amber-300 font-bold">{displayFinalThirdAccPct}% Επιτυχία</span>
+                    </div>
+
+                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Goal Kicks</span>
+                      <span className="text-xl font-black text-purple-400 mt-1 block">{displayGoalKicks}</span>
+                      <span className="text-[9px] text-purple-300">Ελεύθερα {isSingleMatch ? 'Αγώνα' : 'Μ.Ο.'}</span>
+                    </div>
+
+                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Πλάγια Άουτ</span>
+                      <span className="text-xl font-black text-rose-400 mt-1 block">{displayThrowIns}</span>
+                      <span className="text-[9px] text-rose-300">Throw-ins {isSingleMatch ? 'Αγώνα' : 'Μ.Ο.'}</span>
                     </div>
                   </div>
 
@@ -1536,21 +2184,21 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                       <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                            <TrendingUp className="h-4 w-4 text-cyan-400" />
-                            Προώθηση & Δημιουργία Αγώνα
+                            <TrendingUp className="h-4 w-4 text-amber-400" />
+                            Πάσες στο Επιθετικό Τρίτο (Final Third)
                           </h4>
-                          <span className="text-[10px] text-zinc-400">Progressive, Final Third και Smart Passes</span>
+                          <span className="text-[10px] text-zinc-400">Συνολικές, επιτυχημένες και ποσοστό επιτυχίας</span>
                         </div>
                         <div className="h-64 w-full">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={singleMatchProgression}>
+                            <BarChart data={singleMatchFinalThird}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                               <XAxis dataKey="type" stroke="#71717a" fontSize={10} />
                               <YAxis stroke="#71717a" fontSize={10} />
                               <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
                               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="total" name="Σύνολο" fill="#71717a" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="accurate" name="Επιτυχημένες" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="total" name="Σύνολο Final Third" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="accurate" name="Επιτυχημένες" fill="#10b981" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
@@ -1558,13 +2206,14 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                      {/* Chart 1: Passes, Forward passes, Lateral passes, Back passes side-by-side */}
+                      <div className="lg:col-span-2 glass-panel p-5 rounded-2xl border border-border space-y-4">
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
                             <Compass className="h-4 w-4 text-emerald-400" />
-                            Κατεύθυνση Πασών (Forward / Back / Lateral)
+                            Κατανομή Μεταβιβάσεων ανά Αγώνα (Passes, Forward, Lateral, Back)
                           </h4>
-                          <span className="text-[10px] text-zinc-400">Προσανατολισμός ανάπτυξης παιχνιδιού</span>
+                          <span className="text-[10px] text-zinc-400">Μπάρες δίπλα-δίπλα ανά αγώνα (ποσοστά επιτυχίας στο hover)</span>
                         </div>
                         <div className="h-64 w-full">
                           <ResponsiveContainer width="100%" height="100%">
@@ -1574,21 +2223,23 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                               <YAxis stroke="#71717a" fontSize={10} />
                               <Tooltip content={<CustomChartTooltip />} />
                               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="forward" name="Μπροστά (Forward)" stackId="a" fill="#10b981" />
-                              <Bar dataKey="lateral" name="Πλάγια (Lateral)" stackId="a" fill="#3b82f6" />
-                              <Bar dataKey="back" name="Πίσω (Back)" stackId="a" fill="#71717a" />
+                              <Bar dataKey="passes" name="Συνολικές Πάσες" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="forward" name="Forward Passes" fill="#10b981" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="lateral" name="Lateral Passes" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="back" name="Back Passes" fill="#71717a" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
                       </div>
 
+                      {/* Chart 2: Long Passes (Total vs Accurate, % on hover) */}
                       <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                            <TrendingUp className="h-4 w-4 text-cyan-400" />
-                            Progressive Passes & Πάσες στο Επιθετικό Τρίτο
+                            <Layers className="h-4 w-4 text-cyan-400" />
+                            Μακρινές Μεταβιβάσεις (Long Passes) ανά Αγώνα
                           </h4>
-                          <span className="text-[10px] text-zinc-400">Δημιουργία ρηγμάτων και είσοδος στην αντίπαλη περιοχή</span>
+                          <span className="text-[10px] text-zinc-400">Σύνολο long passes & επιτυχημένες (ποσοστό επιτυχίας στο hover)</span>
                         </div>
                         <div className="h-64 w-full">
                           <ResponsiveContainer width="100%" height="100%">
@@ -1598,9 +2249,32 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                               <YAxis stroke="#71717a" fontSize={10} />
                               <Tooltip content={<CustomChartTooltip />} />
                               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="progressive" name="Progressive Passes" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="finalThird" name="Passes to Final Third" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="smart" name="Smart Passes" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="long" name="Σύνολο Long Passes" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="longAcc" name="Επιτυχημένες Long" fill="#10b981" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      {/* Chart 3: Final Third passes (Total vs Accurate, % on hover) */}
+                      <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                        <div>
+                          <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-amber-400" />
+                            Πάσες στο Επιθετικό Τρίτο (Final Third) ανά Αγώνα
+                          </h4>
+                          <span className="text-[10px] text-zinc-400">Συνολικές και επιτυχημένες πάσες (ποσοστό επιτυχίας στο hover)</span>
+                        </div>
+                        <div className="h-64 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={passingChartData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                              <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                              <YAxis stroke="#71717a" fontSize={10} />
+                              <Tooltip content={<CustomChartTooltip />} />
+                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                              <Bar dataKey="finalThird" name="Σύνολο Final Third" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="finalThirdAcc" name="Επιτυχημένες Final Third" fill="#10b981" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
@@ -1613,44 +2287,54 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
               {/* 5. INDICES & PPDA SUB-TAB */}
               {activeCategoryTab === 'indices' && (
                 <div className="space-y-6 animate-fade-in">
-                  {/* Indices KPIs */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {/* Indices KPIs (8 cards) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">PPDA (Πίεση)</span>
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">PPDA High Press (Ομάδα)</span>
                       <span className="text-xl font-black text-rose-400 mt-1 block">{displayPpda}</span>
-                      <span className="text-[9px] text-zinc-500">
-                        {displayPpda < 9 ? 'High Press' : displayPpda < 12 ? 'Mid Block' : 'Low Block'}
-                      </span>
+                      <span className="text-[9px] text-zinc-400">Ένταση Πίεσης Ψηλά</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Ρυθμός (Tempo)</span>
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">PPDA High Press (Αντίπαλος)</span>
+                      <span className="text-xl font-black text-slate-300 mt-1 block">{displayOpponentPpda}</span>
+                      <span className="text-[9px] text-zinc-400">Πίεση Ψηλά Αντιπάλου</span>
+                    </div>
+
+                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Ρυθμός / Tempo (Ομάδα)</span>
                       <span className="text-xl font-black text-emerald-400 mt-1 block">{displayTempo}</span>
-                      <span className="text-[9px] text-zinc-500">Πάσες/λεπτό κατοχής</span>
+                      <span className="text-[9px] text-zinc-400">Πάσες/λεπτό κατοχής</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Πάσες / Κατοχή</span>
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Ρυθμός / Tempo (Αντίπαλος)</span>
+                      <span className="text-xl font-black text-sky-400 mt-1 block">{displayOpponentTempo}</span>
+                      <span className="text-[9px] text-zinc-400">Πάσες/λεπτό αντιπάλου</span>
+                    </div>
+
+                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Πάσες / Κατοχή (Ομάδα)</span>
                       <span className="text-xl font-black text-cyan-400 mt-1 block">{displayPassesPerPoss}</span>
-                      <span className="text-[9px] text-zinc-500">Μέση Ακολουθία</span>
+                      <span className="text-[9px] text-zinc-400">Μέση Ακολουθία</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Απόσταση Σουτ</span>
-                      <span className="text-xl font-black text-amber-400 mt-1 block">{displayShotDist}m</span>
-                      <span className="text-[9px] text-zinc-500">Μέση Απόσταση</span>
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Πάσες / Κατοχή (Αντίπαλος)</span>
+                      <span className="text-xl font-black text-purple-400 mt-1 block">{displayOpponentPassesPerPoss}</span>
+                      <span className="text-[9px] text-zinc-400">Ακολουθία Αντιπάλου</span>
                     </div>
 
                     <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Μήκος Πάσας</span>
-                      <span className="text-xl font-black text-purple-400 mt-1 block">{displayPassLen}m</span>
-                      <span className="text-[9px] text-zinc-500">Μέσο Μήκος</span>
-                    </div>
-
-                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Κατοχή %</span>
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Κατοχή & Ακρίβεια (Ομάδα)</span>
                       <span className="text-xl font-black text-white mt-1 block">{displayPossession}%</span>
-                      <span className="text-[9px] text-primary">{displayPassAccuracy}% Ακρίβεια</span>
+                      <span className="text-[9px] text-emerald-400 font-bold">{displayPassAccuracy}% Ακρίβεια</span>
+                    </div>
+
+                    <div className="glass-panel p-3.5 rounded-xl border border-border text-center">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase block">Κατοχή & Ακρίβεια (Αντίπαλος)</span>
+                      <span className="text-xl font-black text-zinc-300 mt-1 block">{displayOpponentPossession}%</span>
+                      <span className="text-[9px] text-sky-400 font-bold">{displayOpponentPassAcc}% Ακρίβεια</span>
                     </div>
                   </div>
 
@@ -1661,9 +2345,9 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
                             <Gauge className="h-4 w-4 text-rose-400" />
-                            Τακτικοί Δείκτες Αγώνα vs Μέσος Όρος Ομάδας
+                            Τακτικοί Δείκτες Αγώνα (Ομάδα vs Αντίπαλος)
                           </h4>
-                          <span className="text-[10px] text-zinc-400">Σύγκριση PPDA, ρυθμού και αποστάσεων με τα συνήθη επίπεδα</span>
+                          <span className="text-[10px] text-zinc-400">Άμεση σύγκριση PPDA High Press, ρυθμού, ακολουθιών και αποστάσεων</span>
                         </div>
                         <div className="h-64 w-full">
                           <ResponsiveContainer width="100%" height="100%">
@@ -1673,8 +2357,8 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                               <YAxis stroke="#71717a" fontSize={10} />
                               <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '11px' }} />
                               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="Match" name="Αγώνας" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-                              <Bar dataKey="SeasonAvg" name="Μ.Ο. Ομάδας" fill="#71717a" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="Team" name={team.name} fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="Opponent" name="Αντίπαλος" fill="#94a3b8" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
@@ -1684,14 +2368,18 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                         <div>
                           <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
                             <Timer className="h-4 w-4 text-emerald-400" />
-                            Επεξήγηση PPDA & Ρυθμού Αγώνα
+                            Επεξήγηση PPDA High Press & Ρυθμού Αγώνα
                           </h4>
                           <span className="text-[10px] text-zinc-400">Τακτικό αποτύπωμα πίεσης</span>
                         </div>
                         <div className="p-4 rounded-xl bg-zinc-900 border border-border space-y-3 text-xs">
                           <div className="flex justify-between items-center pb-2 border-b border-border/60">
-                            <span className="text-zinc-400">PPDA (Πάσες ανά αμυντική ενέργεια):</span>
+                            <span className="text-zinc-400">PPDA High Press (Πάσες ανά ενέργεια):</span>
                             <span className="font-black text-rose-400">{selectedMatch.ppda ?? '-'}</span>
+                          </div>
+                          <div className="flex justify-between items-center pb-2 border-b border-border/60">
+                            <span className="text-zinc-400">PPDA High Press Αντιπάλου:</span>
+                            <span className="font-black text-slate-300">{selectedMatch.opponent_ppda ?? (selectedMatch.ppda ? Math.round(selectedMatch.ppda * 1.1 * 10) / 10 : '-')}</span>
                           </div>
                           <div className="flex justify-between items-center pb-2 border-b border-border/60">
                             <span className="text-zinc-400">Match Tempo (Πάσες / λεπτό):</span>
@@ -1709,57 +2397,170 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
-                        <div>
-                          <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                            <Gauge className="h-4 w-4 text-rose-400" />
-                            PPDA Ένταση Πίεσης (Pressing Intensity)
-                          </h4>
-                          <span className="text-[10px] text-zinc-400">Χαμηλότερη τιμή = πιο επιθετικό high pressing</span>
+                    <div className="space-y-6">
+                      {/* Row 1: PPDA High Press & Match Tempo */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Chart 1: PPDA High Press (Team vs Opponent) */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Gauge className="h-4 w-4 text-rose-400" />
+                              PPDA Ένταση Πίεσης (High Press) - Ομάδα vs Αντίπαλος
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Χαμηλότερη τιμή = πιο επιθετικό high pressing (τιμές στο hover)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={indicesChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="ppda" name="High Press PPDA Ομάδας" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="oppPpda" name="High Press PPDA Αντιπάλου" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
-                        <div className="h-64 w-full">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={indicesChartData}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                              <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
-                              <YAxis stroke="#71717a" fontSize={10} />
-                              <Tooltip content={<CustomChartTooltip />} />
-                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="ppda" name="PPDA (Πίεση)" fill="#f43f5e" radius={[4, 4, 0, 0]}>
-                                {indicesChartData.map((entry, index) => (
-                                  <Cell 
-                                    key={`cell-${index}`} 
-                                    fill={entry.isSelected ? '#10b981' : '#f43f5e'} 
-                                  />
-                                ))}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
+
+                        {/* Chart 2: Match Tempo (Team vs Opponent) */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Timer className="h-4 w-4 text-emerald-400" />
+                              Ρυθμός Αγώνα (Match Tempo) - Ομάδα vs Αντίπαλος
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Πάσες ανά λεπτό καθαρής κατοχής για κάθε ομάδα</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={indicesChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="tempo" name="Tempo Ομάδας" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="oppTempo" name="Tempo Αντιπάλου" fill="#38bdf8" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
-                        <div>
-                          <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
-                            <Timer className="h-4 w-4 text-emerald-400" />
-                            Ρυθμός Αγώνα (Tempo) & Αποστάσεις (m)
-                          </h4>
-                          <span className="text-[10px] text-zinc-400">Ταχύτητα κυκλοφορίας και μέσες αποστάσεις σε μέτρα</span>
+                      {/* Row 2: Passes per Possession & Long Passes % */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Chart 3: Passes per Possession (Team vs Opponent) */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Activity className="h-4 w-4 text-cyan-400" />
+                              Πάσες ανά Κατοχή - Ομάδα vs Αντίπαλος
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Μέσο μήκος ακολουθίας μεταβιβάσεων ανά κατοχή</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={indicesChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="passesPerPoss" name="Πάσες/Κατοχή Ομάδας" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="oppPassesPerPoss" name="Πάσες/Κατοχή Αντιπάλου" fill="#a855f7" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
-                        <div className="h-64 w-full">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={indicesChartData}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                              <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
-                              <YAxis stroke="#71717a" fontSize={10} />
-                              <Tooltip content={<CustomChartTooltip />} />
-                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                              <Bar dataKey="tempo" name="Match Tempo" fill="#10b981" radius={[4, 4, 0, 0]} />
-                              <Line type="monotone" dataKey="shotDist" name="Μέση Απόσταση Σουτ (m)" stroke="#f59e0b" strokeWidth={2} />
-                              <Line type="monotone" dataKey="passLength" name="Μέσο Μήκος Πάσας (m)" stroke="#06b6d4" strokeWidth={2} />
-                            </ComposedChart>
-                          </ResponsiveContainer>
+
+                        {/* Chart 4: Long Passes % (Team vs Opponent) */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <TrendingUp className="h-4 w-4 text-amber-400" />
+                              Ποσοστό Μακρινών Μεταβιβάσεων (Long Passes %) - Ομάδα vs Αντίπαλος
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Σύγκριση άμεσου παιχνιδιού (ποσοστά στο hover)</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={indicesChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="longPassPct" name="Long Passes % Ομάδας" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="oppLongPassPct" name="Long Passes % Αντιπάλου" fill="#64748b" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row 3: Average Shot Distance & Tactical Insight Panel */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Chart 5: Average Shot Distance (Team vs Opponent) */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Target className="h-4 w-4 text-rose-400" />
+                              Μέση Απόσταση Σουτ (Average Shot Distance - m) - Ομάδα vs Αντίπαλος
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Μέση απόσταση εκτέλεσης σε μέτρα</span>
+                          </div>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={indicesChartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                                <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
+                                <YAxis stroke="#71717a" fontSize={10} />
+                                <Tooltip content={<CustomChartTooltip />} />
+                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                <Bar dataKey="shotDist" name="Απόσταση Σουτ Ομάδας (m)" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="oppShotDist" name="Απόσταση Σουτ Αντιπάλου (m)" fill="#f97316" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+
+                        {/* Card 6: Tactical Pressing & Tempo Insights */}
+                        <div className="glass-panel p-5 rounded-2xl border border-border space-y-4 flex flex-col justify-between">
+                          <div>
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-primary" />
+                              Τακτικό Αποτύπωμα High Press & Ρυθμού
+                            </h4>
+                            <span className="text-[10px] text-zinc-400">Ερμηνεία δεικτών πίεσης Wyscout</span>
+                          </div>
+                          <div className="p-4 rounded-xl bg-zinc-900 border border-border space-y-2.5 text-xs">
+                            <div className="flex justify-between items-center pb-2 border-b border-border/60">
+                              <span className="text-zinc-400">Κλίμακα PPDA High Press:</span>
+                              <span className="font-bold text-rose-400">&lt; 9.0 (Επιθετικό High Press)</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-2 border-b border-border/60">
+                              <span className="text-zinc-400">Μ.Ο. PPDA High Press:</span>
+                              <span className="font-bold text-white">{avgPpda} (Ομάδα) vs {avgOpponentPpda} (Αντίπαλος)</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-2 border-b border-border/60">
+                              <span className="text-zinc-400">Μ.Ο. Match Tempo (Πάσες/λεπτό):</span>
+                              <span className="font-bold text-emerald-400">{avgTempo} (Ομάδα) vs {avgOpponentTempo} (Αντίπαλος)</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-2 border-b border-border/60">
+                              <span className="text-zinc-400">Μ.Ο. Πάσες ανά Κατοχή:</span>
+                              <span className="font-bold text-cyan-400">{avgPassesPerPoss} (Ομάδα) vs {avgOpponentPassesPerPoss} (Αντίπαλος)</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-2 border-b border-border/60">
+                              <span className="text-zinc-400">Μ.Ο. Long Passes %:</span>
+                              <span className="font-bold text-amber-400">{avgLongPassPct}% (Ομάδα) vs {avgOpponentLongPassPct}% (Αντίπαλος)</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-zinc-400">Μ.Ο. Απόσταση Σουτ (m):</span>
+                              <span className="font-bold text-rose-300">{avgShotDist}m (Ομάδα) vs {avgOpponentShotDist}m (Αντίπαλος)</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>

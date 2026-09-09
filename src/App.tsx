@@ -1,21 +1,20 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthLanding from './components/auth/AuthLanding';
-import ProfileSelector from './components/auth/ProfileSelector';
 import OpponentGrid from './components/opponents/OpponentGrid';
 import OpponentDetail from './components/opponents/OpponentDetail';
 import { OpponentTeam } from './types';
 import { 
   Shield, 
   Flame, 
-  RefreshCw, 
   LogOut, 
   ShieldCheck,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Cloud
 } from 'lucide-react';
 
 function MainWorkspace() {
-  const { user, activeProfile, selectProfile, signOut, loading } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const [selectedOpponent, setSelectedOpponent] = useState<OpponentTeam | null>(null);
 
   if (loading) {
@@ -26,7 +25,7 @@ function MainWorkspace() {
             <Flame className="h-8 w-8" />
           </div>
           <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
-            Φόρτωση Pitch Analytica...
+            Φόρτωση DataVis...
           </p>
         </div>
       </div>
@@ -38,12 +37,9 @@ function MainWorkspace() {
     return <AuthLanding />;
   }
 
-  // 2. If authenticated but no active profile selected, show profile hub
-  if (!activeProfile) {
-    return <ProfileSelector />;
-  }
-
-  const profileColor = activeProfile.color || '#10b981';
+  const userEmail = user.email || 'coach@datavis.com';
+  const initial = userEmail.charAt(0).toUpperCase();
+  const displayName = user.user_metadata?.name || userEmail.split('@')[0] || 'Αναλυτής';
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row">
@@ -56,35 +52,28 @@ function MainWorkspace() {
               <Flame className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="font-extrabold text-sm tracking-widest text-white leading-none uppercase">Pitch Analytica</h1>
+              <h1 className="font-extrabold text-sm tracking-widest text-white leading-none uppercase">DataVis</h1>
               <span className="text-[9px] font-bold text-primary uppercase tracking-widest mt-1 block">Wyscout Scouting Suite</span>
             </div>
           </div>
 
-          {/* Active Profile Banner */}
+          {/* Connected Account Banner */}
           <div className="mb-6 p-3 rounded-xl bg-zinc-900/90 border border-border flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
               <div 
-                className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs text-white border border-white/10 flex-shrink-0"
-                style={{ backgroundColor: `${profileColor}30`, borderColor: profileColor }}
+                className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs text-primary bg-primary/10 border border-primary/25 flex-shrink-0"
               >
-                {activeProfile.name.charAt(0).toUpperCase()}
+                {initial}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-white truncate leading-none">{activeProfile.name}</p>
-                <span className="text-[10px] text-zinc-400 truncate block mt-0.5">{activeProfile.team_name}</span>
+                <p className="text-xs font-bold text-white truncate leading-none capitalize">{displayName}</p>
+                <span className="text-[10px] text-zinc-400 truncate flex items-center gap-1 mt-1">
+                  <Cloud className="h-2.5 w-2.5 text-emerald-400" />
+                  <span>Supabase Cloud</span>
+                </span>
               </div>
             </div>
-            <button
-              onClick={() => {
-                setSelectedOpponent(null);
-                selectProfile(null as any);
-              }}
-              title="Αλλαγή Προφίλ"
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition flex-shrink-0"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </button>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 glow-active flex-shrink-0" title="Cloud Sync Active" />
           </div>
 
           {/* Nav Items */}
@@ -125,37 +114,26 @@ function MainWorkspace() {
                 <ShieldCheck className="h-3.5 w-3.5" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-bold text-white truncate leading-none">{activeProfile.role}</p>
-                <span className="text-[9px] text-zinc-400 truncate block mt-0.5">{user.email || 'Analyst'}</span>
+                <p className="text-[11px] font-bold text-white truncate leading-none">Scouting Analyst</p>
+                <span className="text-[9px] text-zinc-400 truncate block mt-0.5">{userEmail}</span>
               </div>
             </div>
-            <span className="h-2 w-2 rounded-full bg-primary glow-active flex-shrink-0" title="Scouting Workspace Active"></span>
+            <span className="h-2 w-2 rounded-full bg-primary glow-active flex-shrink-0" title="Workspace Active"></span>
           </div>
 
-          <div className="flex gap-2 pt-1 border-t border-border/40">
-            <button
-              onClick={() => {
-                setSelectedOpponent(null);
-                selectProfile(null as any);
-              }}
-              className="flex-1 py-1.5 px-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-border text-[10px] font-bold text-zinc-300 hover:text-white transition flex items-center justify-center gap-1"
-            >
-              <RefreshCw className="h-3 w-3" />
-              <span>Αλλαγή Προφίλ</span>
-            </button>
-            <button
-              onClick={() => signOut()}
-              title="Αποσύνδεση"
-              className="py-1.5 px-2.5 rounded-lg bg-zinc-900 hover:bg-destructive/20 border border-border hover:border-destructive/40 text-[10px] font-bold text-zinc-400 hover:text-destructive transition flex items-center justify-center"
-            >
-              <LogOut className="h-3 w-3" />
-            </button>
-          </div>
+          <button
+            onClick={() => signOut()}
+            title="Αποσύνδεση"
+            className="w-full py-2 px-3 rounded-lg bg-zinc-900 hover:bg-destructive/20 border border-border hover:border-destructive/40 text-xs font-bold text-zinc-300 hover:text-destructive transition flex items-center justify-center gap-2"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span>Αποσύνδεση</span>
+          </button>
         </div>
       </aside>
 
       {/* Main Workspace */}
-      <main key={activeProfile.id} className="flex-1 bg-background p-6 md:p-8 overflow-y-auto max-h-screen">
+      <main key={user.id} className="flex-1 bg-background p-6 md:p-8 overflow-y-auto max-h-screen">
         {selectedOpponent ? (
           <OpponentDetail 
             team={selectedOpponent} 
