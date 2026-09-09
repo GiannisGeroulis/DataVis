@@ -353,12 +353,35 @@ export const opponentService = {
 
   saveOpponentTeam: async (team: OpponentTeam): Promise<OpponentTeam> => {
     const profileId = team.profile_id || dbService.getProfileScope();
-    const teamWithScope: OpponentTeam = {
+    let teamWithScope: OpponentTeam = {
       ...team,
       id: team.id || `opp_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
       profile_id: profileId,
       created_at: team.created_at || new Date().toISOString()
     };
+
+    if (isRealSupabase && supabase) {
+      try {
+        // Reuse existing team with the same name if one exists in Supabase
+        const { data: existingTeams } = await supabase
+          .from('opponent_teams')
+          .select('*')
+          .ilike('name', teamWithScope.name.trim());
+
+        if (existingTeams && existingTeams.length > 0) {
+          const matched = existingTeams.find(t => t.id === teamWithScope.id) || existingTeams[0];
+          teamWithScope = {
+            ...matched,
+            ...teamWithScope,
+            id: matched.id
+          };
+        }
+
+        await supabase.from('opponent_teams').upsert(teamWithScope);
+      } catch (e) {
+        console.warn("Supabase saveOpponentTeam error:", e);
+      }
+    }
 
     const storageKey = `fm_p_${profileId}_opponents`;
     const current = getLS<OpponentTeam[]>(storageKey, []);
@@ -369,14 +392,6 @@ export const opponentService = {
       current.unshift(teamWithScope);
     }
     setLS(storageKey, current);
-
-    if (isRealSupabase && supabase) {
-      try {
-        await supabase.from('opponent_teams').upsert(teamWithScope);
-      } catch (e) {
-        console.warn("Supabase saveOpponentTeam error:", e);
-      }
-    }
 
     return teamWithScope;
   },
@@ -401,6 +416,114 @@ export const opponentService = {
   }
 };
 
+// Exact 104 columns physically supported in the Supabase wyscout_matches table schema
+export const VALID_SUPABASE_MATCH_COLUMNS = new Set([
+  'id',
+  'profile_id',
+  'opponent_team_id',
+  'date',
+  'match_name',
+  'competition',
+  'duration',
+  'scheme',
+  'team_analyzed',
+  'goals',
+  'xg',
+  'shots',
+  'shots_on_target',
+  'shots_on_target_pct',
+  'passes',
+  'passes_accurate',
+  'passing_accuracy',
+  'possession',
+  'losses',
+  'losses_low',
+  'losses_med',
+  'losses_high',
+  'recoveries',
+  'recoveries_low',
+  'recoveries_med',
+  'recoveries_high',
+  'duels',
+  'duels_won',
+  'duels_won_pct',
+  'opponent_team_name',
+  'opponent_goals',
+  'opponent_xg',
+  'opponent_shots',
+  'opponent_possession',
+  'positional_attacks',
+  'positional_attacks_shots',
+  'positional_attacks_pct',
+  'counterattacks',
+  'counterattacks_shots',
+  'counterattacks_pct',
+  'corners',
+  'corners_shots',
+  'corners_shots_pct',
+  'free_kicks',
+  'free_kicks_shots',
+  'free_kicks_shots_pct',
+  'penalties',
+  'penalties_converted',
+  'crosses',
+  'crosses_accurate',
+  'crosses_acc_pct',
+  'offensive_duels',
+  'offensive_duels_won',
+  'offensive_duels_won_pct',
+  'offsides',
+  'conceded_goals',
+  'shots_against',
+  'shots_against_on_target',
+  'shots_against_on_target_pct',
+  'defensive_duels',
+  'defensive_duels_won',
+  'defensive_duels_won_pct',
+  'aerial_duels',
+  'aerial_duels_won',
+  'aerial_duels_won_pct',
+  'sliding_tackles',
+  'sliding_tackles_succ',
+  'sliding_tackles_succ_pct',
+  'interceptions',
+  'clearances',
+  'fouls',
+  'yellow_cards',
+  'red_cards',
+  'forward_passes',
+  'forward_passes_acc',
+  'forward_passes_pct',
+  'back_passes',
+  'back_passes_acc',
+  'back_passes_pct',
+  'lateral_passes',
+  'lateral_passes_acc',
+  'lateral_passes_pct',
+  'long_passes',
+  'long_passes_acc',
+  'long_passes_pct',
+  'passes_to_final_third',
+  'passes_to_final_third_acc',
+  'passes_to_final_third_pct',
+  'progressive_passes',
+  'progressive_passes_acc',
+  'progressive_passes_pct',
+  'smart_passes',
+  'smart_passes_acc',
+  'smart_passes_pct',
+  'throw_ins',
+  'throw_ins_acc',
+  'goal_kicks',
+  'ppda',
+  'match_tempo',
+  'avg_passes_per_possession',
+  'long_pass_pct',
+  'avg_shot_distance',
+  'avg_pass_length',
+  'created_at'
+]);
+
 // ==========================================
 // WYSCOUT MATCHES & ANALYTICS SERVICE
 // ==========================================
@@ -413,20 +536,61 @@ export const wyscoutService = {
 
     if (isRealSupabase && supabase) {
       try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('wyscout_matches')
           .select('*')
           .eq('opponent_team_id', opponentTeamId)
           .order('date', { ascending: false });
         
         if (!error && data) {
-          if (data.length === 0 && localMatches.length > 0) {
-            // Auto-sync existing local matches to newly created Supabase table
-            await supabase.from('wyscout_matches').upsert(localMatches);
+          // If 0 matches found directly by opponentTeamId, check sibling entries with same team name
+          if (data.length === 0) {
+            const { data: currentTeam } = await supabase
+              .from('opponent_teams')
+              .select('name')
+              .eq('id', opponentTeamId)
+              .maybeSingle();
+
+            if (currentTeam?.name) {
+              const { data: siblingTeams } = await supabase
+                .from('opponent_teams')
+                .select('id')
+                .ilike('name', currentTeam.name.trim());
+
+              if (siblingTeams && siblingTeams.length > 0) {
+                const siblingIds = siblingTeams.map(s => s.id);
+                const { data: siblingMatches } = await supabase
+                  .from('wyscout_matches')
+                  .select('*')
+                  .in('opponent_team_id', siblingIds)
+                  .order('date', { ascending: false });
+
+                if (siblingMatches && siblingMatches.length > 0) {
+                  data = siblingMatches;
+                }
+              }
+            }
+          }
+
+          // Deduplicate matches by date + match_name
+          const seen = new Set<string>();
+          const uniqueMatches: WyscoutMatch[] = [];
+          for (const m of ((data || []) as WyscoutMatch[])) {
+            const key = `${m.date}_${m.match_name}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              uniqueMatches.push(m);
+            }
+          }
+
+          if (uniqueMatches.length === 0 && localMatches.length > 0) {
+            // Auto-sync existing local matches to newly created Supabase table safely
+            await wyscoutService.saveMatches(localMatches);
             return localMatches.sort((a, b) => b.date.localeCompare(a.date));
           }
-          setLS(storageKey, data);
-          return data as WyscoutMatch[];
+
+          setLS(storageKey, uniqueMatches);
+          return uniqueMatches;
         }
       } catch (e) {
         console.warn("Supabase getMatchesByTeam error:", e);
@@ -444,10 +608,10 @@ export const wyscoutService = {
     const storageKey = `fm_p_${profileId}_wyscout_${opponentTeamId}`;
     const current = getLS<WyscoutMatch[]>(storageKey, []);
 
-    // Ensure all matches have valid non-null values for required Supabase columns
+    // Ensure all matches have valid non-null values for required columns
     const cleanMatches = matches.map(m => ({
       ...m,
-      team_analyzed: m.team_analyzed || 'Team Analyzed',
+      team_analyzed: (m.team_analyzed || '').trim() || 'Team Analyzed',
       profile_id: m.profile_id || profileId,
       opponent_team_id: m.opponent_team_id || opponentTeamId,
       created_at: m.created_at || new Date().toISOString()
@@ -466,7 +630,46 @@ export const wyscoutService = {
 
     if (isRealSupabase && supabase) {
       try {
-        const { error } = await supabase.from('wyscout_matches').upsert(cleanMatches);
+        // 1. Ensure foreign key opponent_team exists in remote Supabase table before inserting matches
+        if (opponentTeamId) {
+          const { data: teamCheck } = await supabase
+            .from('opponent_teams')
+            .select('id')
+            .eq('id', opponentTeamId)
+            .maybeSingle();
+
+          if (!teamCheck) {
+            const allLocalTeams = getLS<OpponentTeam[]>(`fm_p_${profileId}_opponents`, []);
+            const localTeam = allLocalTeams.find(t => t.id === opponentTeamId);
+            await supabase.from('opponent_teams').upsert({
+              id: opponentTeamId,
+              profile_id: profileId,
+              name: localTeam?.name || matches[0].team_analyzed || 'Opponent Team',
+              logo_url: localTeam?.logo_url,
+              country: localTeam?.country,
+              league: localTeam?.league,
+              notes: localTeam?.notes,
+              created_at: localTeam?.created_at || new Date().toISOString()
+            });
+          }
+        }
+
+        // 2. Filter payload strictly against known physical Supabase schema columns
+        const sanitizedForSupabase = cleanMatches.map(m => {
+          const row: Record<string, any> = {};
+          for (const key of VALID_SUPABASE_MATCH_COLUMNS) {
+            if ((m as any)[key] !== undefined) {
+              row[key] = (m as any)[key];
+            }
+          }
+          if (!row.team_analyzed) {
+            row.team_analyzed = 'Team Analyzed';
+          }
+          return row;
+        });
+
+        // 3. Upsert to Supabase Cloud
+        const { error } = await supabase.from('wyscout_matches').upsert(sanitizedForSupabase);
         if (error) {
           console.error("Supabase saveMatches error:", error.message, error.details);
           throw new Error(`Supabase saveMatches: ${error.message}`);
@@ -594,7 +797,7 @@ export const wyscoutService = {
           const duration = Number(targetRow[3] || 90);
           const rawScheme = String(targetRow[5] || '4-3-3');
           const scheme = rawScheme.split(' ')[0].trim();
-          const teamAnalyzed = String(targetRow[4] || teamName).trim();
+          const teamAnalyzed = (String(targetRow[4] || teamName || '').trim()) || 'Team Analyzed';
 
           // Check if we already have this match in fixtureMap
           const existing: WyscoutMatch = (fixtureMap.get(fKey) as WyscoutMatch) || {
