@@ -95,17 +95,27 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
         setUploadFeedback({ type: 'error', message: errors.join('. ') });
         setPreviewMatches([]);
       } else {
+        // AUTOMATICALLY SAVE DIRECTLY TO SUPABASE CLOUD IMMEDIATELY
+        await wyscoutService.saveMatches(parsed);
+        await loadMatches();
         setPreviewMatches(parsed);
+
         const errNotice = errors.length > 0 ? ` (Προειδοποιήσεις: ${errors.join(', ')})` : '';
         setUploadFeedback({
           type: 'success',
-          message: `Επεξεργάστηκαν ${filesProcessed} αρχεία Wyscout! Αναγνωρίστηκαν ${parsed.length} αγώνες με συγχωνευμένα στατιστικά. Ελέγξτε την προεπισκόπηση και πατήστε Αποθήκευση.${errNotice}`
+          message: `Επεξεργάστηκαν ${filesProcessed} αρχεία Wyscout! Αποθηκεύτηκαν μόνιμα ${parsed.length} αγώνες στο Supabase Cloud. Τα δεδομένα είναι πλέον άμεσα διαθέσιμα για όλους τους χρήστες και συσκευές.${errNotice}`
         });
+
+        // Switch to analytics automatically after a brief moment so the user sees the live stats
+        setTimeout(() => {
+          setActiveTab('analytics');
+        }, 1500);
       }
     } catch (err: any) {
-      setUploadFeedback({ type: 'error', message: `Σφάλμα ανάγνωσης αρχείων: ${err.message || err}` });
+      setUploadFeedback({ type: 'error', message: `Σφάλμα επεξεργασίας/αποθήκευσης αρχείων: ${err.message || err}` });
     } finally {
       setUploadLoading(false);
+      e.target.value = '';
     }
   };
 

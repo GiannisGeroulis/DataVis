@@ -195,65 +195,45 @@ export const opponentService = {
     const storageKey = `fm_p_${profileId}_opponents`;
     let localTeams = getLS<OpponentTeam[]>(storageKey, []);
 
-    // Check for any legacy local storage teams if current profile storage is empty
-    if (localTeams.length === 0) {
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('fm_p_') && key.endsWith('_opponents') && key !== storageKey) {
-            const found = getLS<OpponentTeam[]>(key, []);
-            if (found && found.length > 0) {
-              localTeams = found.map(t => ({ ...t, profile_id: profileId }));
-              setLS(storageKey, localTeams);
-              break;
-            }
-          }
-        }
-      } catch {
-        // ignore storage scan error
-      }
-    }
-
     if (isRealSupabase && supabase) {
       try {
+        // Fetch all opponent teams from Supabase (shared club scouting database)
         const { data, error } = await supabase
           .from('opponent_teams')
           .select('*')
-          .eq('profile_id', profileId)
           .order('created_at', { ascending: false });
         
-        if (!error && data) {
-          if (data.length === 0) {
-            if (localTeams.length > 0) {
-              // Auto-sync existing local teams to Supabase under this user's profile_id
-              await supabase.from('opponent_teams').upsert(localTeams);
-              return localTeams;
-            }
+        if (!error && data && data.length > 0) {
+          // Count Wyscout matches per team in Supabase
+          const { data: matchRows } = await supabase
+            .from('wyscout_matches')
+            .select('opponent_team_id');
+          
+          const matchCountMap: Record<string, number> = {};
+          (matchRows || []).forEach(m => {
+            matchCountMap[m.opponent_team_id] = (matchCountMap[m.opponent_team_id] || 0) + 1;
+          });
 
-            // If user has 0 teams in Supabase and 0 teams locally, check if there are legacy teams in Supabase with prof_ IDs
-            const { data: legacyTeams } = await supabase
-              .from('opponent_teams')
-              .select('*')
-              .ilike('profile_id', 'prof_%')
-              .order('created_at', { ascending: false });
-            
-            if (legacyTeams && legacyTeams.length > 0) {
-              // Deduplicate teams by name (keep latest) and claim for this user
-              const uniqueByName = new Map<string, OpponentTeam>();
-              legacyTeams.forEach(t => {
-                const norm = t.name.toLowerCase().trim();
-                if (!uniqueByName.has(norm)) {
-                  uniqueByName.set(norm, { ...t, profile_id: profileId });
-                }
-              });
-              const adopted = Array.from(uniqueByName.values());
-              await supabase.from('opponent_teams').upsert(adopted);
-              setLS(storageKey, adopted);
-              return adopted;
+          // Deduplicate teams by name (case-insensitive & trimmed)
+          // Keep the team instance that holds the most matches, or the latest created
+          const uniqueByName = new Map<string, OpponentTeam>();
+          data.forEach(t => {
+            const norm = t.name.toLowerCase().trim();
+            const count = matchCountMap[t.id] || 0;
+            const existing = uniqueByName.get(norm);
+            if (!existing) {
+              uniqueByName.set(norm, t);
+            } else {
+              const existingCount = matchCountMap[existing.id] || 0;
+              if (count > existingCount || (count === existingCount && (t.created_at || '') > (existing.created_at || ''))) {
+                uniqueByName.set(norm, t);
+              }
             }
-          }
-          setLS(storageKey, data);
-          return data as OpponentTeam[];
+          });
+
+          const deduplicated = Array.from(uniqueByName.values());
+          setLS(storageKey, deduplicated);
+          return deduplicated;
         }
       } catch (e) {
         console.warn("Supabase getOpponentTeams error:", e);
@@ -464,7 +444,16 @@ export const wyscoutService = {
     const storageKey = `fm_p_${profileId}_wyscout_${opponentTeamId}`;
     const current = getLS<WyscoutMatch[]>(storageKey, []);
 
-    matches.forEach(newMatch => {
+    // Ensure all matches have valid non-null values for required Supabase columns
+    const cleanMatches = matches.map(m => ({
+      ...m,
+      team_analyzed: m.team_analyzed || 'Team Analyzed',
+      profile_id: m.profile_id || profileId,
+      opponent_team_id: m.opponent_team_id || opponentTeamId,
+      created_at: m.created_at || new Date().toISOString()
+    }));
+
+    cleanMatches.forEach(newMatch => {
       const idx = current.findIndex(m => m.id === newMatch.id || (m.date === newMatch.date && m.match_name === newMatch.match_name));
       if (idx >= 0) {
         current[idx] = newMatch;
@@ -477,9 +466,14 @@ export const wyscoutService = {
 
     if (isRealSupabase && supabase) {
       try {
-        await supabase.from('wyscout_matches').upsert(matches);
-      } catch (e) {
-        console.warn("Supabase saveMatches error:", e);
+        const { error } = await supabase.from('wyscout_matches').upsert(cleanMatches);
+        if (error) {
+          console.error("Supabase saveMatches error:", error.message, error.details);
+          throw new Error(`Supabase saveMatches: ${error.message}`);
+        }
+      } catch (e: any) {
+        console.error("Supabase saveMatches exception:", e);
+        throw e;
       }
     }
   },
