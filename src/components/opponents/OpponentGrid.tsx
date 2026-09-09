@@ -509,11 +509,14 @@ export default function OpponentGrid({ onSelectTeam }: OpponentGridProps) {
                                 {gt.avgXg ? ` • Μ.Ο. xG: ${gt.avgXg}` : ''}
                                 {gt.avgPoss ? ` • Κατοχή: ${gt.avgPoss}%` : ''}
                               </p>
-                              {gt.notes && (
-                                <p className="text-[10px] text-zinc-500 truncate mt-0.5 max-w-md italic">
-                                  {gt.notes}
-                                </p>
-                              )}
+                              {(() => {
+                                const cleanNotes = gt.notes?.replace(/<!--\s*WY_EXTRAS:[\s\S]*?-->/g, '').trim();
+                                return cleanNotes ? (
+                                  <p className="text-[10px] text-zinc-500 truncate mt-0.5 max-w-md italic">
+                                    {cleanNotes}
+                                  </p>
+                                ) : null;
+                              })()}
                             </div>
                           </div>
 

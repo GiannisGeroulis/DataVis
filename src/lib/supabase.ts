@@ -416,8 +416,8 @@ export const opponentService = {
   }
 };
 
-// Exact 104 columns physically supported in the Supabase wyscout_matches table schema
-export const VALID_SUPABASE_MATCH_COLUMNS = new Set([
+// Exact base columns originally created in the remote Supabase wyscout_matches table schema
+export const BASE_SUPABASE_MATCH_COLUMNS = new Set([
   'id',
   'profile_id',
   'opponent_team_id',
@@ -524,6 +524,30 @@ export const VALID_SUPABASE_MATCH_COLUMNS = new Set([
   'created_at'
 ]);
 
+// Full set of supported columns including opponent indices and metrics
+export const VALID_SUPABASE_MATCH_COLUMNS = new Set([
+  ...BASE_SUPABASE_MATCH_COLUMNS,
+  'opponent_shots_on_target',
+  'opponent_ppda',
+  'opponent_match_tempo',
+  'opponent_avg_passes_per_possession',
+  'opponent_long_pass_pct',
+  'opponent_avg_shot_distance',
+  'opponent_avg_pass_length',
+  'opponent_passes',
+  'opponent_passes_accurate',
+  'opponent_passing_accuracy',
+  'corners_against',
+  'corners_against_shots',
+  'corners_against_shots_pct',
+  'free_kicks_against',
+  'free_kicks_against_shots',
+  'free_kicks_against_shots_pct',
+  'crosses_against',
+  'crosses_against_accurate',
+  'crosses_against_acc_pct'
+]);
+
 // ==========================================
 // WYSCOUT MATCHES & ANALYTICS SERVICE
 // ==========================================
@@ -544,42 +568,88 @@ export const wyscoutService = {
         
         if (!error && data) {
           // If 0 matches found directly by opponentTeamId, check sibling entries with same team name
-          if (data.length === 0) {
-            const { data: currentTeam } = await supabase
+          let currentTeamNotes: string | null = null;
+          const { data: currentTeam } = await supabase
+            .from('opponent_teams')
+            .select('name, notes')
+            .eq('id', opponentTeamId)
+            .maybeSingle();
+
+          if (currentTeam?.notes) {
+            currentTeamNotes = currentTeam.notes;
+          }
+
+          if (data.length === 0 && currentTeam?.name) {
+            const { data: siblingTeams } = await supabase
               .from('opponent_teams')
-              .select('name')
-              .eq('id', opponentTeamId)
-              .maybeSingle();
+              .select('id, notes')
+              .ilike('name', currentTeam.name.trim());
 
-            if (currentTeam?.name) {
-              const { data: siblingTeams } = await supabase
-                .from('opponent_teams')
-                .select('id')
-                .ilike('name', currentTeam.name.trim());
+            if (siblingTeams && siblingTeams.length > 0) {
+              const siblingIds = siblingTeams.map(s => s.id);
+              const { data: siblingMatches } = await supabase
+                .from('wyscout_matches')
+                .select('*')
+                .in('opponent_team_id', siblingIds)
+                .order('date', { ascending: false });
 
-              if (siblingTeams && siblingTeams.length > 0) {
-                const siblingIds = siblingTeams.map(s => s.id);
-                const { data: siblingMatches } = await supabase
-                  .from('wyscout_matches')
-                  .select('*')
-                  .in('opponent_team_id', siblingIds)
-                  .order('date', { ascending: false });
-
-                if (siblingMatches && siblingMatches.length > 0) {
-                  data = siblingMatches;
+              if (siblingMatches && siblingMatches.length > 0) {
+                data = siblingMatches;
+                if (!currentTeamNotes) {
+                  const sWithNotes = siblingTeams.find(s => s.notes);
+                  if (sWithNotes?.notes) currentTeamNotes = sWithNotes.notes;
                 }
               }
             }
           }
 
-          // Deduplicate matches by date + match_name
+          // Parse metadata extras from opponent_teams.notes if present
+          let remoteExtras: Record<string, any> = {};
+          if (currentTeamNotes) {
+            const matchTag = currentTeamNotes.match(/<!--\s*WY_EXTRAS:\s*([\s\S]*?)\s*-->/);
+            if (matchTag && matchTag[1]) {
+              try {
+                remoteExtras = JSON.parse(matchTag[1]);
+              } catch (parseErr) {
+                console.warn("Error parsing WY_EXTRAS from team notes:", parseErr);
+              }
+            }
+          }
+
+          // Deduplicate matches by date + match_name and merge with local & remote extras
           const seen = new Set<string>();
           const uniqueMatches: WyscoutMatch[] = [];
           for (const m of ((data || []) as WyscoutMatch[])) {
             const key = `${m.date}_${m.match_name}`;
             if (!seen.has(key)) {
               seen.add(key);
-              uniqueMatches.push(m);
+              const local = localMatches.find(lm => lm.id === m.id || (lm.date === m.date && lm.match_name === m.match_name));
+              const extras = remoteExtras[key] || {};
+
+              const merged: WyscoutMatch = {
+                ...(local || {}),
+                ...m,
+                opponent_ppda: (m.opponent_ppda !== undefined && m.opponent_ppda !== null && m.opponent_ppda > 0) ? m.opponent_ppda : (local?.opponent_ppda ?? extras.opponent_ppda ?? undefined),
+                opponent_match_tempo: (m.opponent_match_tempo !== undefined && m.opponent_match_tempo !== null && m.opponent_match_tempo > 0) ? m.opponent_match_tempo : (local?.opponent_match_tempo ?? extras.opponent_match_tempo ?? undefined),
+                opponent_avg_passes_per_possession: (m.opponent_avg_passes_per_possession !== undefined && m.opponent_avg_passes_per_possession !== null && m.opponent_avg_passes_per_possession > 0) ? m.opponent_avg_passes_per_possession : (local?.opponent_avg_passes_per_possession ?? extras.opponent_avg_passes_per_possession ?? undefined),
+                opponent_long_pass_pct: (m.opponent_long_pass_pct !== undefined && m.opponent_long_pass_pct !== null && m.opponent_long_pass_pct > 0) ? m.opponent_long_pass_pct : (local?.opponent_long_pass_pct ?? extras.opponent_long_pass_pct ?? undefined),
+                opponent_avg_shot_distance: (m.opponent_avg_shot_distance !== undefined && m.opponent_avg_shot_distance !== null && m.opponent_avg_shot_distance > 0) ? m.opponent_avg_shot_distance : (local?.opponent_avg_shot_distance ?? extras.opponent_avg_shot_distance ?? undefined),
+                opponent_avg_pass_length: (m.opponent_avg_pass_length !== undefined && m.opponent_avg_pass_length !== null && m.opponent_avg_pass_length > 0) ? m.opponent_avg_pass_length : (local?.opponent_avg_pass_length ?? extras.opponent_avg_pass_length ?? undefined),
+                opponent_passes: (m.opponent_passes !== undefined && m.opponent_passes !== null && m.opponent_passes > 0) ? m.opponent_passes : (local?.opponent_passes ?? extras.opponent_passes ?? undefined),
+                opponent_passes_accurate: (m.opponent_passes_accurate !== undefined && m.opponent_passes_accurate !== null) ? m.opponent_passes_accurate : (local?.opponent_passes_accurate ?? extras.opponent_passes_accurate ?? undefined),
+                opponent_passing_accuracy: (m.opponent_passing_accuracy !== undefined && m.opponent_passing_accuracy !== null) ? m.opponent_passing_accuracy : (local?.opponent_passing_accuracy ?? extras.opponent_passing_accuracy ?? undefined),
+                opponent_shots_on_target: (m.opponent_shots_on_target !== undefined && m.opponent_shots_on_target !== null) ? m.opponent_shots_on_target : (local?.opponent_shots_on_target ?? extras.opponent_shots_on_target ?? undefined),
+                corners_against: (m.corners_against !== undefined && m.corners_against !== null) ? m.corners_against : (local?.corners_against ?? extras.corners_against ?? undefined),
+                corners_against_shots: (m.corners_against_shots !== undefined && m.corners_against_shots !== null) ? m.corners_against_shots : (local?.corners_against_shots ?? extras.corners_against_shots ?? undefined),
+                corners_against_shots_pct: (m.corners_against_shots_pct !== undefined && m.corners_against_shots_pct !== null) ? m.corners_against_shots_pct : (local?.corners_against_shots_pct ?? extras.corners_against_shots_pct ?? undefined),
+                free_kicks_against: (m.free_kicks_against !== undefined && m.free_kicks_against !== null) ? m.free_kicks_against : (local?.free_kicks_against ?? extras.free_kicks_against ?? undefined),
+                free_kicks_against_shots: (m.free_kicks_against_shots !== undefined && m.free_kicks_against_shots !== null) ? m.free_kicks_against_shots : (local?.free_kicks_against_shots ?? extras.free_kicks_against_shots ?? undefined),
+                free_kicks_against_shots_pct: (m.free_kicks_against_shots_pct !== undefined && m.free_kicks_against_shots_pct !== null) ? m.free_kicks_against_shots_pct : (local?.free_kicks_against_shots_pct ?? extras.free_kicks_against_shots_pct ?? undefined),
+                crosses_against: (m.crosses_against !== undefined && m.crosses_against !== null) ? m.crosses_against : (local?.crosses_against ?? extras.crosses_against ?? undefined),
+                crosses_against_accurate: (m.crosses_against_accurate !== undefined && m.crosses_against_accurate !== null) ? m.crosses_against_accurate : (local?.crosses_against_accurate ?? extras.crosses_against_accurate ?? undefined),
+                crosses_against_acc_pct: (m.crosses_against_acc_pct !== undefined && m.crosses_against_acc_pct !== null) ? m.crosses_against_acc_pct : (local?.crosses_against_acc_pct ?? extras.crosses_against_acc_pct ?? undefined),
+              };
+              uniqueMatches.push(merged);
             }
           }
 
@@ -617,16 +687,44 @@ export const wyscoutService = {
       created_at: m.created_at || new Date().toISOString()
     }));
 
+    // Merge non-destructively so category fields are not overwritten
     cleanMatches.forEach(newMatch => {
       const idx = current.findIndex(m => m.id === newMatch.id || (m.date === newMatch.date && m.match_name === newMatch.match_name));
       if (idx >= 0) {
-        current[idx] = newMatch;
+        current[idx] = { ...current[idx], ...newMatch };
       } else {
         current.push(newMatch);
       }
     });
 
     setLS(storageKey, current);
+
+    // Build extras map for safe persistence (regardless of whether DB has columns)
+    const extrasMap: Record<string, any> = {};
+    current.forEach(m => {
+      const key = `${m.date}_${m.match_name}`;
+      extrasMap[key] = {
+        opponent_shots_on_target: m.opponent_shots_on_target,
+        opponent_ppda: m.opponent_ppda,
+        opponent_match_tempo: m.opponent_match_tempo,
+        opponent_avg_passes_per_possession: m.opponent_avg_passes_per_possession,
+        opponent_long_pass_pct: m.opponent_long_pass_pct,
+        opponent_avg_shot_distance: m.opponent_avg_shot_distance,
+        opponent_avg_pass_length: m.opponent_avg_pass_length,
+        opponent_passes: m.opponent_passes,
+        opponent_passes_accurate: m.opponent_passes_accurate,
+        opponent_passing_accuracy: m.opponent_passing_accuracy,
+        corners_against: m.corners_against,
+        corners_against_shots: m.corners_against_shots,
+        corners_against_shots_pct: m.corners_against_shots_pct,
+        free_kicks_against: m.free_kicks_against,
+        free_kicks_against_shots: m.free_kicks_against_shots,
+        free_kicks_against_shots_pct: m.free_kicks_against_shots_pct,
+        crosses_against: m.crosses_against,
+        crosses_against_accurate: m.crosses_against_accurate,
+        crosses_against_acc_pct: m.crosses_against_acc_pct,
+      };
+    });
 
     if (isRealSupabase && supabase) {
       try {
@@ -654,8 +752,8 @@ export const wyscoutService = {
           }
         }
 
-        // 2. Filter payload strictly against known physical Supabase schema columns
-        const sanitizedForSupabase = cleanMatches.map(m => {
+        // 2. Try upserting to Supabase Cloud with all columns
+        const sanitizedFull = cleanMatches.map(m => {
           const row: Record<string, any> = {};
           for (const key of VALID_SUPABASE_MATCH_COLUMNS) {
             if ((m as any)[key] !== undefined) {
@@ -668,11 +766,54 @@ export const wyscoutService = {
           return row;
         });
 
-        // 3. Upsert to Supabase Cloud
-        const { error } = await supabase.from('wyscout_matches').upsert(sanitizedForSupabase);
-        if (error) {
-          console.error("Supabase saveMatches error:", error.message, error.details);
-          throw new Error(`Supabase saveMatches: ${error.message}`);
+        const { error: fullError } = await supabase.from('wyscout_matches').upsert(sanitizedFull);
+        
+        // If Supabase schema does not yet have opponent columns, gracefully fall back to base columns
+        if (fullError && (fullError.code === 'PGRST204' || fullError.code === '42703' || String(fullError.message || '').includes('column'))) {
+          console.warn("Supabase schema does not have opponent columns yet; falling back to base columns and storing extras in team metadata.");
+          const sanitizedBase = cleanMatches.map(m => {
+            const row: Record<string, any> = {};
+            for (const key of BASE_SUPABASE_MATCH_COLUMNS) {
+              if ((m as any)[key] !== undefined) {
+                row[key] = (m as any)[key];
+              }
+            }
+            if (!row.team_analyzed) {
+              row.team_analyzed = 'Team Analyzed';
+            }
+            return row;
+          });
+          const { error: baseError } = await supabase.from('wyscout_matches').upsert(sanitizedBase);
+          if (baseError) {
+            console.error("Supabase base saveMatches error:", baseError.message);
+            throw new Error(`Supabase saveMatches: ${baseError.message}`);
+          }
+        } else if (fullError) {
+          console.error("Supabase saveMatches error:", fullError.message, fullError.details);
+          throw new Error(`Supabase saveMatches: ${fullError.message}`);
+        }
+
+        // 3. Always synchronize extras metadata to opponent_teams.notes so values survive on any device
+        if (opponentTeamId) {
+          try {
+            const { data: teamData } = await supabase
+              .from('opponent_teams')
+              .select('notes')
+              .eq('id', opponentTeamId)
+              .maybeSingle();
+
+            const existingNotes = teamData?.notes || '';
+            const cleanUserNotes = existingNotes.replace(/<!--\s*WY_EXTRAS:[\s\S]*?-->/g, '').trim();
+            const extrasTag = `<!-- WY_EXTRAS: ${JSON.stringify(extrasMap)} -->`;
+            const newNotes = cleanUserNotes ? `${cleanUserNotes}\n\n${extrasTag}` : extrasTag;
+
+            await supabase
+              .from('opponent_teams')
+              .update({ notes: newNotes })
+              .eq('id', opponentTeamId);
+          } catch (notesErr) {
+            console.warn("Could not sync extras to opponent_teams.notes:", notesErr);
+          }
         }
       } catch (e: any) {
         console.error("Supabase saveMatches exception:", e);
@@ -711,6 +852,12 @@ export const wyscoutService = {
     const fixtureMap = new Map<string, Partial<WyscoutMatch>>();
     const errors: string[] = [];
     let filesProcessed = 0;
+
+    const toNum = (val: any): number => {
+      if (val === null || val === undefined || val === '') return 0;
+      const n = Number(String(val).replace(',', '.').trim());
+      return isNaN(n) ? 0 : n;
+    };
 
     for (const file of files) {
       try {
@@ -881,17 +1028,17 @@ export const wyscoutService = {
             existing.offsides = Number(targetRow[31] || 0);
 
             if (opponentRow) {
-              existing.opponent_xg = Math.round(Number(opponentRow[6] || 0) * 100) / 100;
-              existing.opponent_shots = Number(opponentRow[7] || 0);
-              existing.corners_against = Number(opponentRow[16] || 0);
-              existing.corners_against_shots = Number(opponentRow[17] || 0);
-              existing.corners_against_shots_pct = Number(opponentRow[18] || (existing.corners_against ? Math.round((existing.corners_against_shots / existing.corners_against) * 100) : 0));
-              existing.free_kicks_against = Number(opponentRow[19] || 0);
-              existing.free_kicks_against_shots = Number(opponentRow[20] || 0);
-              existing.free_kicks_against_shots_pct = Number(opponentRow[21] || (existing.free_kicks_against ? Math.round((existing.free_kicks_against_shots / existing.free_kicks_against) * 100) : 0));
-              existing.crosses_against = Number(opponentRow[25] || 0);
-              existing.crosses_against_accurate = Number(opponentRow[26] || 0);
-              existing.crosses_against_acc_pct = Number(opponentRow[27] || (existing.crosses_against ? Math.round((existing.crosses_against_accurate / existing.crosses_against) * 100) : 0));
+              existing.opponent_xg = Math.round(toNum(opponentRow[6]) * 100) / 100;
+              existing.opponent_shots = toNum(opponentRow[7]);
+              existing.corners_against = toNum(opponentRow[16]);
+              existing.corners_against_shots = toNum(opponentRow[17]);
+              existing.corners_against_shots_pct = toNum(opponentRow[18]) || (existing.corners_against ? Math.round((existing.corners_against_shots / existing.corners_against) * 100) : 0);
+              existing.free_kicks_against = toNum(opponentRow[19]);
+              existing.free_kicks_against_shots = toNum(opponentRow[20]);
+              existing.free_kicks_against_shots_pct = toNum(opponentRow[21]) || (existing.free_kicks_against ? Math.round((existing.free_kicks_against_shots / existing.free_kicks_against) * 100) : 0);
+              existing.crosses_against = toNum(opponentRow[25]);
+              existing.crosses_against_accurate = toNum(opponentRow[26]);
+              existing.crosses_against_acc_pct = toNum(opponentRow[27]) || (existing.crosses_against ? Math.round((existing.crosses_against_accurate / existing.crosses_against) * 100) : 0);
             }
           }
 
@@ -947,27 +1094,41 @@ export const wyscoutService = {
             existing.goal_kicks = Number(targetRow[33] || 0);
 
             if (opponentRow) {
-              existing.opponent_passes = Number(opponentRow[6] || existing.opponent_passes || 0);
-              existing.opponent_passes_accurate = Number(opponentRow[7] || existing.opponent_passes_accurate || 0);
-              existing.opponent_passing_accuracy = Number(opponentRow[8] || (existing.opponent_passes ? Math.round((existing.opponent_passes_accurate / existing.opponent_passes) * 100) : existing.opponent_passing_accuracy || 0));
+              existing.opponent_passes = toNum(opponentRow[6]) || existing.opponent_passes || 0;
+              existing.opponent_passes_accurate = toNum(opponentRow[7]) || existing.opponent_passes_accurate || 0;
+              existing.opponent_passing_accuracy = toNum(opponentRow[8]) || (existing.opponent_passes ? Math.round((existing.opponent_passes_accurate / existing.opponent_passes) * 100) : existing.opponent_passing_accuracy || 0);
             }
           }
 
           if (isIndices) {
-            existing.match_tempo = Number(targetRow[6] || 0);
-            existing.avg_passes_per_possession = Number(targetRow[7] || 0);
-            existing.long_pass_pct = Number(targetRow[8] || 0);
-            existing.ppda = Number(targetRow[9] || 0);
-            existing.avg_shot_distance = Number(targetRow[10] || 0);
-            existing.avg_pass_length = Number(targetRow[11] || 0);
+            const tempoIdx = headerRow.findIndex((c: any) => String(c || '').toLowerCase().includes('tempo'));
+            const passesPossIdx = headerRow.findIndex((c: any) => String(c || '').toLowerCase().includes('passes per possession'));
+            const longPassIdx = headerRow.findIndex((c: any) => String(c || '').toLowerCase().includes('long pass'));
+            const ppdaIdx = headerRow.findIndex((c: any) => String(c || '').toLowerCase().includes('ppda'));
+            const shotDistIdx = headerRow.findIndex((c: any) => String(c || '').toLowerCase().includes('shot distance'));
+            const passLengthIdx = headerRow.findIndex((c: any) => String(c || '').toLowerCase().includes('pass length'));
+
+            const cTempo = tempoIdx >= 0 ? tempoIdx : 6;
+            const cPassesPoss = passesPossIdx >= 0 ? passesPossIdx : 7;
+            const cLongPass = longPassIdx >= 0 ? longPassIdx : 8;
+            const cPpda = ppdaIdx >= 0 ? ppdaIdx : 9;
+            const cShotDist = shotDistIdx >= 0 ? shotDistIdx : 10;
+            const cPassLength = passLengthIdx >= 0 ? passLengthIdx : 11;
+
+            existing.match_tempo = toNum(targetRow[cTempo]);
+            existing.avg_passes_per_possession = toNum(targetRow[cPassesPoss]);
+            existing.long_pass_pct = toNum(targetRow[cLongPass]);
+            existing.ppda = toNum(targetRow[cPpda]);
+            existing.avg_shot_distance = toNum(targetRow[cShotDist]);
+            existing.avg_pass_length = toNum(targetRow[cPassLength]);
 
             if (opponentRow) {
-              existing.opponent_match_tempo = Number(opponentRow[6] || 0);
-              existing.opponent_avg_passes_per_possession = Number(opponentRow[7] || 0);
-              existing.opponent_long_pass_pct = Number(opponentRow[8] || 0);
-              existing.opponent_ppda = Number(opponentRow[9] || 0);
-              existing.opponent_avg_shot_distance = Number(opponentRow[10] || 0);
-              existing.opponent_avg_pass_length = Number(opponentRow[11] || 0);
+              existing.opponent_match_tempo = toNum(opponentRow[cTempo]);
+              existing.opponent_avg_passes_per_possession = toNum(opponentRow[cPassesPoss]);
+              existing.opponent_long_pass_pct = toNum(opponentRow[cLongPass]);
+              existing.opponent_ppda = toNum(opponentRow[cPpda]);
+              existing.opponent_avg_shot_distance = toNum(opponentRow[cShotDist]);
+              existing.opponent_avg_pass_length = toNum(opponentRow[cPassLength]);
             }
           }
 

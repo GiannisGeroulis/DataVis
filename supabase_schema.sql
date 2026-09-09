@@ -382,3 +382,24 @@ ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS long_pass_pct NUMERI
 ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS avg_shot_distance NUMERIC DEFAULT 0;
 ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS avg_pass_length NUMERIC DEFAULT 0;
 
+-- Wyscout Opponent Indices & Metrics
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS opponent_shots_on_target INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS opponent_ppda NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS opponent_match_tempo NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS opponent_avg_passes_per_possession NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS opponent_long_pass_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS opponent_avg_shot_distance NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS opponent_avg_pass_length NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS opponent_passes INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS opponent_passes_accurate INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS opponent_passing_accuracy NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS corners_against INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS corners_against_shots INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS corners_against_shots_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS free_kicks_against INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS free_kicks_against_shots INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS free_kicks_against_shots_pct NUMERIC DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS crosses_against INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS crosses_against_accurate INTEGER DEFAULT 0;
+ALTER TABLE public.wyscout_matches ADD COLUMN IF NOT EXISTS crosses_against_acc_pct NUMERIC DEFAULT 0;
+

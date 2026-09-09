@@ -234,15 +234,36 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
   const indicesMatches = matches.filter(m => (m.ppda ?? 0) > 0 || (m.match_tempo ?? 0) > 0);
   const nIdx = indicesMatches.length || 1;
   const avgPpda = Math.round((indicesMatches.reduce((s, m) => s + (m.ppda || 0), 0) / nIdx) * 10) / 10;
-  const avgOpponentPpda = Math.round((indicesMatches.reduce((s, m) => s + (m.opponent_ppda || (m.ppda ? Math.round(m.ppda * 1.1 * 10) / 10 : 0)), 0) / nIdx) * 10) / 10;
+  
+  const oppPpdaMatches = indicesMatches.filter(m => (m.opponent_ppda ?? 0) > 0);
+  const avgOpponentPpda = oppPpdaMatches.length > 0 
+    ? Math.round((oppPpdaMatches.reduce((s, m) => s + (m.opponent_ppda || 0), 0) / oppPpdaMatches.length) * 10) / 10 
+    : 0;
+
   const avgTempo = Math.round((indicesMatches.reduce((s, m) => s + (m.match_tempo || 0), 0) / nIdx) * 10) / 10;
-  const avgOpponentTempo = Math.round((indicesMatches.reduce((s, m) => s + (m.opponent_match_tempo || (m.match_tempo ? Math.round(m.match_tempo * 0.95 * 10) / 10 : 0)), 0) / nIdx) * 10) / 10;
+  const oppTempoMatches = indicesMatches.filter(m => (m.opponent_match_tempo ?? 0) > 0);
+  const avgOpponentTempo = oppTempoMatches.length > 0
+    ? Math.round((oppTempoMatches.reduce((s, m) => s + (m.opponent_match_tempo || 0), 0) / oppTempoMatches.length) * 10) / 10
+    : 0;
+
   const avgPassesPerPoss = Math.round((indicesMatches.reduce((s, m) => s + (m.avg_passes_per_possession || 0), 0) / nIdx) * 10) / 10;
-  const avgOpponentPassesPerPoss = Math.round((indicesMatches.reduce((s, m) => s + (m.opponent_avg_passes_per_possession || (m.avg_passes_per_possession ? Math.round(m.avg_passes_per_possession * 0.9 * 10) / 10 : 0)), 0) / nIdx) * 10) / 10;
+  const oppPassesPossMatches = indicesMatches.filter(m => (m.opponent_avg_passes_per_possession ?? 0) > 0);
+  const avgOpponentPassesPerPoss = oppPassesPossMatches.length > 0
+    ? Math.round((oppPassesPossMatches.reduce((s, m) => s + (m.opponent_avg_passes_per_possession || 0), 0) / oppPassesPossMatches.length) * 10) / 10
+    : 0;
+
   const avgLongPassPct = Math.round(indicesMatches.reduce((s, m) => s + (m.long_pass_pct || 0), 0) / nIdx);
-  const avgOpponentLongPassPct = Math.round(indicesMatches.reduce((s, m) => s + (m.opponent_long_pass_pct || (m.long_pass_pct ? Math.round(m.long_pass_pct * 1.1) : 0)), 0) / nIdx);
+  const oppLongPassMatches = indicesMatches.filter(m => (m.opponent_long_pass_pct ?? 0) > 0);
+  const avgOpponentLongPassPct = oppLongPassMatches.length > 0
+    ? Math.round(oppLongPassMatches.reduce((s, m) => s + (m.opponent_long_pass_pct || 0), 0) / oppLongPassMatches.length)
+    : 0;
+
   const avgShotDist = Math.round((indicesMatches.reduce((s, m) => s + (m.avg_shot_distance || 0), 0) / nIdx) * 10) / 10;
-  const avgOpponentShotDist = Math.round((indicesMatches.reduce((s, m) => s + (m.opponent_avg_shot_distance || (m.avg_shot_distance ? Math.round(m.avg_shot_distance * 1.05 * 10) / 10 : 0)), 0) / nIdx) * 10) / 10;
+  const oppShotDistMatches = indicesMatches.filter(m => (m.opponent_avg_shot_distance ?? 0) > 0);
+  const avgOpponentShotDist = oppShotDistMatches.length > 0
+    ? Math.round((oppShotDistMatches.reduce((s, m) => s + (m.opponent_avg_shot_distance || 0), 0) / oppShotDistMatches.length) * 10) / 10
+    : 0;
+
   const avgOpponentPassingAccuracy = Math.round(indicesMatches.reduce((s, m) => s + (m.opponent_passing_accuracy || 75), 0) / nIdx);
 
   // ==========================================
@@ -345,15 +366,15 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
   // Indices Tab KPIs
   const displayPpda = isSingleMatch ? (selectedMatch.ppda ?? 0) : avgPpda;
   const displayOpponentPpda = isSingleMatch 
-    ? (selectedMatch.opponent_ppda ?? (selectedMatch.ppda ? Math.round(selectedMatch.ppda * 1.1 * 10) / 10 : 0)) 
+    ? (selectedMatch.opponent_ppda ?? 0) 
     : avgOpponentPpda;
   const displayTempo = isSingleMatch ? (selectedMatch.match_tempo ?? 0) : avgTempo;
   const displayOpponentTempo = isSingleMatch 
-    ? (selectedMatch.opponent_match_tempo ?? (selectedMatch.match_tempo ? Math.round(selectedMatch.match_tempo * 0.95 * 10) / 10 : 0)) 
+    ? (selectedMatch.opponent_match_tempo ?? 0) 
     : avgOpponentTempo;
   const displayPassesPerPoss = isSingleMatch ? (selectedMatch.avg_passes_per_possession ?? 0) : avgPassesPerPoss;
   const displayOpponentPassesPerPoss = isSingleMatch 
-    ? (selectedMatch.opponent_avg_passes_per_possession ?? (selectedMatch.avg_passes_per_possession ? Math.round(selectedMatch.avg_passes_per_possession * 0.9 * 10) / 10 : 0)) 
+    ? (selectedMatch.opponent_avg_passes_per_possession ?? 0) 
     : avgOpponentPassesPerPoss;
   const displayOpponentPassAcc = isSingleMatch 
     ? (selectedMatch.opponent_passing_accuracy ?? 75) 
@@ -454,11 +475,11 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
 
   // 6. Indices Single Match: Tactical Comparison
   const singleMatchIndicesComparison = isSingleMatch ? [
-    { metric: 'PPDA (High Press)', Team: selectedMatch.ppda ?? 0, Opponent: selectedMatch.opponent_ppda ?? (selectedMatch.ppda ? Math.round(selectedMatch.ppda * 1.1 * 10) / 10 : 0) },
-    { metric: 'Match Tempo', Team: selectedMatch.match_tempo ?? 0, Opponent: selectedMatch.opponent_match_tempo ?? (selectedMatch.match_tempo ? Math.round(selectedMatch.match_tempo * 0.95 * 10) / 10 : 0) },
-    { metric: 'Πάσες / Κατοχή', Team: selectedMatch.avg_passes_per_possession ?? 0, Opponent: selectedMatch.opponent_avg_passes_per_possession ?? (selectedMatch.avg_passes_per_possession ? Math.round(selectedMatch.avg_passes_per_possession * 0.9 * 10) / 10 : 0) },
-    { metric: 'Long Passes %', Team: selectedMatch.long_pass_pct ?? 0, Opponent: selectedMatch.opponent_long_pass_pct ?? (selectedMatch.long_pass_pct ? Math.round(selectedMatch.long_pass_pct * 1.1) : 0) },
-    { metric: 'Απόσταση Σουτ (m)', Team: selectedMatch.avg_shot_distance ?? 0, Opponent: selectedMatch.opponent_avg_shot_distance ?? (selectedMatch.avg_shot_distance ? Math.round(selectedMatch.avg_shot_distance * 1.05 * 10) / 10 : 0) },
+    { metric: 'PPDA (High Press)', Team: selectedMatch.ppda ?? 0, Opponent: selectedMatch.opponent_ppda ?? 0 },
+    { metric: 'Match Tempo', Team: selectedMatch.match_tempo ?? 0, Opponent: selectedMatch.opponent_match_tempo ?? 0 },
+    { metric: 'Πάσες / Κατοχή', Team: selectedMatch.avg_passes_per_possession ?? 0, Opponent: selectedMatch.opponent_avg_passes_per_possession ?? 0 },
+    { metric: 'Long Passes %', Team: selectedMatch.long_pass_pct ?? 0, Opponent: selectedMatch.opponent_long_pass_pct ?? 0 },
+    { metric: 'Απόσταση Σουτ (m)', Team: selectedMatch.avg_shot_distance ?? 0, Opponent: selectedMatch.opponent_avg_shot_distance ?? 0 },
   ] : [];
 
   // ==========================================
@@ -654,22 +675,22 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
 
   const indicesChartData = chronologicalMatches.map(m => {
     const ppda = m.ppda || 0;
-    const oppPpda = m.opponent_ppda || (ppda ? Math.round(ppda * 1.1 * 10) / 10 : 0);
+    const oppPpda = m.opponent_ppda || 0;
 
     const tempo = m.match_tempo || 0;
-    const oppTempo = m.opponent_match_tempo || (tempo ? Math.round(tempo * 0.95 * 10) / 10 : 0);
+    const oppTempo = m.opponent_match_tempo || 0;
 
     const passesPerPoss = m.avg_passes_per_possession || 0;
-    const oppPassesPerPoss = m.opponent_avg_passes_per_possession || (passesPerPoss ? Math.round(passesPerPoss * 0.9 * 10) / 10 : 0);
+    const oppPassesPerPoss = m.opponent_avg_passes_per_possession || 0;
 
     const longPassPct = m.long_pass_pct || 0;
-    const oppLongPassPct = m.opponent_long_pass_pct || (longPassPct ? Math.round(longPassPct * 1.1) : 0);
+    const oppLongPassPct = m.opponent_long_pass_pct || 0;
 
     const shotDist = m.avg_shot_distance || 0;
-    const oppShotDist = m.opponent_avg_shot_distance || (shotDist ? Math.round(shotDist * 1.05 * 10) / 10 : 0);
+    const oppShotDist = m.opponent_avg_shot_distance || 0;
 
     const passLength = m.avg_pass_length || 0;
-    const oppPassLength = m.opponent_avg_pass_length || (passLength ? Math.round(passLength * 0.98 * 10) / 10 : 0);
+    const oppPassLength = m.opponent_avg_pass_length || 0;
 
     const possession = m.possession || 50;
     const oppPossession = m.opponent_possession ?? (100 - possession);
@@ -2389,7 +2410,7 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                           </div>
                           <div className="flex justify-between items-center pb-2 border-b border-border/60">
                             <span className="text-zinc-400">PPDA High Press Αντιπάλου:</span>
-                            <span className="font-black text-slate-300">{selectedMatch.opponent_ppda ?? (selectedMatch.ppda ? Math.round(selectedMatch.ppda * 1.1 * 10) / 10 : '-')}</span>
+                            <span className="font-black text-slate-300">{selectedMatch.opponent_ppda ?? '-'}</span>
                           </div>
                           <div className="flex justify-between items-center pb-2 border-b border-border/60">
                             <span className="text-zinc-400">Match Tempo (Πάσες / λεπτό):</span>
