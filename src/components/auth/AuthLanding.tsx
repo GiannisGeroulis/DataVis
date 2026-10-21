@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Flame, Lock, Mail, Eye, EyeOff, ShieldCheck, ArrowRight, Activity, Database, Shield } from 'lucide-react';
+import DataVisLogo from '../common/DataVisLogo';
+import { Lock, Mail, Eye, EyeOff, ArrowRight, Activity, Compass, TrendingUp, Layers } from 'lucide-react';
 
 export default function AuthLanding() {
   const { signIn } = useAuth();
@@ -49,19 +50,18 @@ export default function AuthLanding() {
       {/* Top Navbar */}
       <header className="relative z-10 p-6 flex items-center justify-between border-b border-border/40 backdrop-blur-md bg-zinc-950/40">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/25 text-primary glow-active">
-            <Flame className="h-6 w-6" />
+          <div className="p-2 bg-primary/10 rounded-xl border border-primary/25 text-primary glow-active">
+            <DataVisLogo className="h-6 w-6" />
           </div>
           <div>
             <h1 className="font-black text-lg tracking-widest text-white uppercase leading-none">DataVis</h1>
-            <span className="text-[10px] font-bold text-primary tracking-widest uppercase mt-1 block">Pro Tactical Intelligence</span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/80 border border-border text-[11px] font-medium text-zinc-400">
-            <span className="h-2 w-2 rounded-full bg-primary glow-active"></span>
-            Supabase Auth Cloud
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/80 border border-border text-[11px] font-semibold text-zinc-400">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 glow-active"></span>
+            <span>Online</span>
           </div>
         </div>
       </header>
@@ -70,26 +70,22 @@ export default function AuthLanding() {
       <div className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center gap-12 p-6 max-w-7xl mx-auto w-full">
         {/* Left Side: Product Showcase */}
         <div className="flex-1 space-y-6 max-w-xl text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-bold uppercase tracking-wider">
-            <ShieldCheck className="h-3.5 w-3.5" /> Next-Gen Football Analytics
-          </div>
-
           <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
-            Επαγγελματική <span className="text-primary glow-text">Τακτική Ανάλυση</span> & Scouting Suite
+            Επαγγελματική <span className="text-primary glow-text">Τακτική Ανάλυση</span> & Scouting
           </h2>
 
           <p className="text-zinc-400 text-sm md:text-base leading-relaxed">
-            Διαχειριστείτε όλες τις ομάδες scouting, αναλύσεις συστημάτων και στατιστικά Wyscout με άμεσο συγχρονισμό στο Supabase Cloud.
+            Ολοκληρωμένη πλατφόρμα τακτικής ανάλυσης, αξιολόγησης αντιπάλων και προηγμένων μετρικών απόδοσης για επαγγελματικά τεχνικά επιτελεία.
           </p>
 
           <div className="grid grid-cols-2 gap-3 pt-2">
             <div className="glass-panel p-3.5 rounded-xl border border-border/80 flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10 text-primary flex-shrink-0">
-                <Shield className="h-4 w-4" />
+                <Compass className="h-4 w-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white uppercase">Wyscout Scouting</h4>
-                <p className="text-[11px] text-zinc-400 mt-0.5">Ανάλυση αντιπάλων και στατιστικά αγώνων σε πραγματικό χρόνο.</p>
+                <h4 className="text-xs font-bold text-white uppercase">Τακτικό Προφίλ</h4>
+                <p className="text-[11px] text-zinc-400 mt-0.5">Χαρτογράφηση συστημάτων, διατάξεων και τακτικής συμπεριφοράς.</p>
               </div>
             </div>
 
@@ -98,28 +94,28 @@ export default function AuthLanding() {
                 <Activity className="h-4 w-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white uppercase">OVR & Form Tracker</h4>
-                <p className="text-[11px] text-zinc-400 mt-0.5">Δυναμικοί αλγόριθμοι αξιολόγησης και φυσικής κατάστασης.</p>
+                <h4 className="text-xs font-bold text-white uppercase">Προηγμένες Μετρικές</h4>
+                <p className="text-[11px] text-zinc-400 mt-0.5">Εμβάθυνση σε xG, PPDA, ρυθμό μεταβιβάσεων και ζώνες πίεσης.</p>
               </div>
             </div>
 
             <div className="glass-panel p-3.5 rounded-xl border border-border/80 flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10 text-primary flex-shrink-0">
-                <Database className="h-4 w-4" />
+                <TrendingUp className="h-4 w-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white uppercase">Επιλεκτική Φόρτωση</h4>
-                <p className="text-[11px] text-zinc-400 mt-0.5">Κενό ξεκίνημα ή φόρτωση μόνο των δεδομένων που θέλετε.</p>
+                <h4 className="text-xs font-bold text-white uppercase">Δυναμικές Τάσεις</h4>
+                <p className="text-[11px] text-zinc-400 mt-0.5">Συγκριτική αποτύπωση εξέλιξης, αποτελεσματικότητας και φόρμας.</p>
               </div>
             </div>
 
             <div className="glass-panel p-3.5 rounded-xl border border-border/80 flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10 text-primary flex-shrink-0">
-                <ShieldCheck className="h-4 w-4" />
+                <Layers className="h-4 w-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white uppercase">Supabase Cloud</h4>
-                <p className="text-[11px] text-zinc-400 mt-0.5">Ασφαλής πιστοποίηση και αποθήκευση στο cloud.</p>
+                <h4 className="text-xs font-bold text-white uppercase">Team Analytics Hub</h4>
+                <p className="text-[11px] text-zinc-400 mt-0.5">Άμεση διαθεσιμότητα όλων των εκθέσεων για όλο το επιτελείο.</p>
               </div>
             </div>
           </div>
@@ -215,8 +211,8 @@ export default function AuthLanding() {
             </form>
 
             <div className="mt-6 pt-6 border-t border-border/80 text-center">
-              <p className="text-[10px] text-zinc-500">
-                Προστατεύεται από Supabase Auth & PostgreSQL Security
+              <p className="text-[10px] text-zinc-500 font-medium">
+                Ασφαλής κρυπτογραφημένη πρόσβαση αναλυτή
               </p>
             </div>
           </div>
@@ -224,8 +220,8 @@ export default function AuthLanding() {
       </div>
 
       {/* Footer */}
-      <footer className="relative z-10 p-4 border-t border-border/40 text-center text-zinc-500 text-xs">
-        © {new Date().getFullYear()} DataVis Tactical Suite • Supabase Architecture v2.0
+      <footer className="relative z-10 p-4 border-t border-border/40 text-center text-zinc-500 text-xs font-medium">
+        © {new Date().getFullYear()} DataVis • Performance & Match Analytics
       </footer>
     </div>
   );

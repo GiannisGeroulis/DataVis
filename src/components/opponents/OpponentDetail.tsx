@@ -103,7 +103,7 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
         const errNotice = errors.length > 0 ? ` (Προειδοποιήσεις: ${errors.join(', ')})` : '';
         setUploadFeedback({
           type: 'success',
-          message: `Επεξεργάστηκαν ${filesProcessed} αρχεία Wyscout! Αποθηκεύτηκαν μόνιμα ${parsed.length} αγώνες στο Supabase Cloud. Τα δεδομένα είναι πλέον άμεσα διαθέσιμα για όλους τους χρήστες και συσκευές.${errNotice}`
+          message: `Επεξεργάστηκαν ${filesProcessed} αρχεία! Αποθηκεύτηκαν επιτυχώς ${parsed.length} αγώνες. Όλα τα δεδομένα είναι πλέον άμεσα διαθέσιμα για ολόκληρο το τεχνικό επιτελείο.${errNotice}`
         });
 
         // Switch to analytics automatically after a brief moment so the user sees the live stats

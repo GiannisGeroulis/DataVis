@@ -183,11 +183,11 @@ export default function OpponentGrid({ onSelectTeam }: OpponentGridProps) {
               Αντίπαλες Ομάδες & Scouting
             </h1>
             <span className="px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase">
-              Wyscout Hub
+              Pro Analytics
             </span>
           </div>
           <p className="text-xs text-zinc-400 mt-1">
-            Επιλέξτε μια αντίπαλη ομάδα για να ανεβάσετε δεδομένα Wyscout (Excel/CSV) και να εξερευνήσετε τα γραφήματα και τους αγώνες της.
+            Επιλέξτε μια ομάδα για να ανεβάσετε δεδομένα αγώνων (Excel/CSV) και να εξερευνήσετε τα τακτικά γραφήματα και τις μετρικές της.
           </p>
         </div>
 
@@ -238,7 +238,7 @@ export default function OpponentGrid({ onSelectTeam }: OpponentGridProps) {
               Προσθήκη Αντιπάλου
             </h3>
             <p className="text-[11px] text-zinc-500 mt-1 max-w-[180px]">
-              Δημιουργήστε νέο φάκελο ομάδας για ανάλυση Wyscout.
+              Δημιουργήστε νέο φάκελο ομάδας για εισαγωγή και ανάλυση αγώνων.
             </p>
           </button>
 
@@ -319,7 +319,7 @@ export default function OpponentGrid({ onSelectTeam }: OpponentGridProps) {
                   <div className="flex items-center justify-between text-xs font-bold text-zinc-400 group-hover:text-primary transition pt-1">
                     <span className="text-[11px] uppercase tracking-wider flex items-center gap-1">
                       <FileSpreadsheet className="h-3.5 w-3.5 text-primary" />
-                      Wyscout Ανάλυση
+                      Τακτική Ανάλυση
                     </span>
                     <ArrowRight className="h-3.5 w-3.5 transform group-hover:translate-x-1 transition" />
                   </div>
@@ -339,7 +339,7 @@ export default function OpponentGrid({ onSelectTeam }: OpponentGridProps) {
           <div>
             <h3 className="text-base font-bold text-white uppercase">Δεν υπάρχουν ακόμη αντίπαλες ομάδες</h3>
             <p className="text-xs text-zinc-400 mt-1 max-w-md mx-auto">
-              Προσθέστε μια ομάδα για να ανεβάσετε τα αρχεία Wyscout και να δείτε την αναλυτική τακτική της παρουσίαση.
+              Προσθέστε μια ομάδα για να εισαγάγετε αγώνες και να εξερευνήσετε την αναλυτική τακτική της παρουσίαση.
             </p>
           </div>
           <button
@@ -440,7 +440,7 @@ export default function OpponentGrid({ onSelectTeam }: OpponentGridProps) {
 
                 {/* Subtitle / Counter */}
                 <div className="flex items-center justify-between text-[11px] text-zinc-400 px-1 flex-shrink-0">
-                  <span>Διαθέσιμες ομάδες με έτοιμα Wyscout δεδομένα από όλους τους χρήστες:</span>
+                  <span>Διαθέσιμες ομάδες με καταγεγραμμένους αγώνες:</span>
                   <button
                     type="button"
                     onClick={loadGlobalTeams}
@@ -505,7 +505,7 @@ export default function OpponentGrid({ onSelectTeam }: OpponentGridProps) {
                               </div>
                               <p className="text-[10px] text-zinc-400 truncate mt-0.5">
                                 {gt.league ? `${gt.league} • ` : ''}
-                                <span className="text-primary font-bold">{gt.matchCount || 0} Αγώνες Wyscout</span>
+                                <span className="text-primary font-bold">{gt.matchCount || 0} Αγώνες</span>
                                 {gt.avgXg ? ` • Μ.Ο. xG: ${gt.avgXg}` : ''}
                                 {gt.avgPoss ? ` • Κατοχή: ${gt.avgPoss}%` : ''}
                               </p>
