@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthLanding from './components/auth/AuthLanding';
-import OpponentGrid from './components/opponents/OpponentGrid';
-import OpponentDetail from './components/opponents/OpponentDetail';
 import DataVisLogo from './components/common/DataVisLogo';
 import { OpponentTeam } from './types';
 import { 
   Shield, 
   LogOut, 
-  FileSpreadsheet
+  FileSpreadsheet,
+  Loader2
 } from 'lucide-react';
+
+const OpponentGrid = lazy(() => import('./components/opponents/OpponentGrid'));
+const OpponentDetail = lazy(() => import('./components/opponents/OpponentDetail'));
 
 function MainWorkspace() {
   const { user, signOut, loading } = useAuth();
@@ -112,16 +114,25 @@ function MainWorkspace() {
 
       {/* Main Workspace */}
       <main key={user.id} className="flex-1 bg-background p-6 md:p-8 overflow-y-auto max-h-screen">
-        {selectedOpponent ? (
-          <OpponentDetail 
-            team={selectedOpponent} 
-            onBack={() => setSelectedOpponent(null)} 
-          />
-        ) : (
-          <OpponentGrid 
-            onSelectTeam={(team) => setSelectedOpponent(team)} 
-          />
-        )}
+        <Suspense fallback={
+          <div className="flex flex-col items-center justify-center min-h-[400px] space-y-3">
+            <Loader2 className="h-7 w-7 text-primary animate-spin" />
+            <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
+              Φόρτωση αναλυτικών στοιχείων...
+            </span>
+          </div>
+        }>
+          {selectedOpponent ? (
+            <OpponentDetail 
+              team={selectedOpponent} 
+              onBack={() => setSelectedOpponent(null)} 
+            />
+          ) : (
+            <OpponentGrid 
+              onSelectTeam={(team) => setSelectedOpponent(team)} 
+            />
+          )}
+        </Suspense>
       </main>
     </div>
   );
