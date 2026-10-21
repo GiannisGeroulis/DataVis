@@ -15,8 +15,8 @@ import { calculateDynamicOVRAndForm } from './ovr-algorithm';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
+const supabaseAnonKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
 
 export const isRealSupabase = 
   supabaseUrl && 
@@ -50,7 +50,7 @@ function setLS<T>(key: string, value: T): void {
 }
 
 // Active Profile ID state
-let currentActiveProfileId: string | null = localStorage.getItem('fm_active_profile_id') || null;
+let currentActiveProfileId: string | null = typeof localStorage !== 'undefined' ? localStorage.getItem('fm_active_profile_id') : null;
 
 // Track if remote Supabase schema supports 'profile_id' column
 let remoteSupportsProfileId: boolean | null = null;
@@ -549,10 +549,221 @@ export const VALID_SUPABASE_MATCH_COLUMNS = new Set([
 ]);
 
 // ==========================================
+// TEAM NORMALIZATION & MATCHING HELPERS
+// ==========================================
+
+export const TEAM_TRANSLATIONS: Record<string, string[]> = {
+  greece: ['greece', 'hellas', 'ελλαδα', 'ελλας', 'εθνικη ελλαδας', 'εθνικη ελλαδος', 'ellada'],
+  slovakia: ['slovakia', 'σλοβακια', 'slovensko', 'slovak republic'],
+  cyprus: ['cyprus', 'κυπρος'],
+  norway: ['norway', 'νορβηγια', 'norge'],
+  sweden: ['sweden', 'σουηδια', 'sverige'],
+  denmark: ['denmark', 'δανια', 'danmark'],
+  finland: ['finland', 'φινλανδια', 'suomi'],
+  germany: ['germany', 'γερμανια', 'deutschland'],
+  france: ['france', 'γαλλια'],
+  italy: ['italy', 'ιταλια', 'italia'],
+  spain: ['spain', 'ισπανια', 'espana'],
+  portugal: ['portugal', 'πορτογαλια'],
+  netherlands: ['netherlands', 'holland', 'ολλανδια', 'nederland'],
+  belgium: ['belgium', 'βελγιο'],
+  england: ['england', 'αγγλια'],
+  scotland: ['scotland', 'σκοτια'],
+  wales: ['wales', 'ουαλια'],
+  ireland: ['ireland', 'ιρλανδια'],
+  poland: ['poland', 'πολωνια', 'polska'],
+  ukraine: ['ukraine', 'ουκρανια'],
+  czechia: ['czechia', 'czech republic', 'τσεχια'],
+  austria: ['austria', 'αυστρια', 'osterreich'],
+  switzerland: ['switzerland', 'ελβετια', 'schweiz', 'suisse'],
+  croatia: ['croatia', 'κροατια', 'hrvatska'],
+  serbia: ['serbia', 'σερβια', 'srbija'],
+  romania: ['romania', 'ρουμανια'],
+  bulgaria: ['bulgaria', 'βουλγαρια'],
+  hungary: ['hungary', 'ουγγαρια', 'magyarorszag'],
+  turkey: ['turkey', 'turkiye', 'τουρκια'],
+  israel: ['israel', 'ισραηλ'],
+  morocco: ['morocco', 'μαροκο', 'maroc'],
+  egypt: ['egypt', 'αιγυπτος'],
+  paok: ['paok', 'παοκ'],
+  olympiacos: ['olympiacos', 'olympiakos', 'ολυμπιακος'],
+  panathinaikos: ['panathinaikos', 'παναθηναικος'],
+  aek: ['aek', 'αεκ'],
+  aris: ['aris', 'αρης']
+};
+
+export function normalizeTeamString(str: string): string {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove diacritics / accents
+    .replace(/\bu[- ]?(\d+)\b/g, 'u$1') // "U-17", "U 17", "Under 17" -> "u17"
+    .replace(/\bunder[- ]?(\d+)\b/g, 'u$1')
+    .replace(/[^\w\d\u0370-\u03ff]+/g, ' ')
+    .trim();
+}
+
+export function isSameTeam(nameA: string, nameB: string): boolean {
+  const normA = normalizeTeamString(nameA);
+  const normB = normalizeTeamString(nameB);
+
+  if (!normA || !normB) return false;
+  if (normA === normB) return true;
+  if (normA.includes(normB) || normB.includes(normA)) return true;
+
+  // Check translation dictionary
+  for (const list of Object.values(TEAM_TRANSLATIONS)) {
+    const aMatches = list.some(t => normA.includes(normalizeTeamString(t)));
+    const bMatches = list.some(t => normB.includes(normalizeTeamString(t)));
+    if (aMatches && bMatches) {
+      const ageA = normA.match(/\bu(\d+)\b/);
+      const ageB = normB.match(/\bu(\d+)\b/);
+      if (ageA && ageB) {
+        return ageA[1] === ageB[1];
+      }
+      return true;
+    }
+  }
+
+  // Token overlap (e.g. "Greece" in both)
+  const tokensA = normA.split(' ').filter(w => w.length > 2);
+  const tokensB = normB.split(' ').filter(w => w.length > 2);
+  const common = tokensA.filter(w => tokensB.includes(w));
+  if (common.length > 0 && common.some(w => !w.match(/^u\d+$/))) {
+    return true;
+  }
+
+  return false;
+}
+
+export function formatExcelDate(val: any): string {
+  if (!val) return '';
+  if (typeof val === 'number' && val > 30000 && val < 60000) {
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+    return d.toISOString().split('T')[0];
+  }
+  const str = String(val).trim();
+  const dmy = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+  if (dmy) {
+    const day = dmy[1].padStart(2, '0');
+    const month = dmy[2].padStart(2, '0');
+    const year = dmy[3];
+    return `${year}-${month}-${day}`;
+  }
+  const ymd = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (ymd) {
+    const year = ymd[1];
+    const month = ymd[2].padStart(2, '0');
+    const day = ymd[3].padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return str;
+}
+
+export function swapMatchData(match: WyscoutMatch): WyscoutMatch {
+  const currentPoss = match.possession || 50;
+  const oppPoss = match.opponent_possession ?? (100 - currentPoss);
+
+  return {
+    ...match,
+    // Swap Names
+    team_analyzed: match.opponent_team_name || 'Opponent',
+    opponent_team_name: match.team_analyzed || 'Team Analyzed',
+
+    // Swap Goals & xG
+    goals: match.opponent_goals ?? match.conceded_goals ?? 0,
+    opponent_goals: match.goals ?? 0,
+    conceded_goals: match.goals ?? 0,
+    xg: match.opponent_xg ?? 0,
+    opponent_xg: match.xg ?? 0,
+
+    // Swap Shots
+    shots: match.opponent_shots ?? match.shots_against ?? 0,
+    opponent_shots: match.shots ?? 0,
+    shots_against: match.shots ?? 0,
+    shots_on_target: match.opponent_shots_on_target ?? match.shots_against_on_target ?? 0,
+    opponent_shots_on_target: match.shots_on_target ?? 0,
+    shots_against_on_target: match.shots_on_target ?? 0,
+    shots_on_target_pct: (match.opponent_shots ? Math.round(((match.opponent_shots_on_target || 0) / match.opponent_shots) * 100) : 0),
+
+    // Swap Possession
+    possession: oppPoss,
+    opponent_possession: currentPoss,
+
+    // Swap Passing
+    passes: match.opponent_passes ?? 0,
+    opponent_passes: match.passes ?? 0,
+    passes_accurate: match.opponent_passes_accurate ?? 0,
+    opponent_passes_accurate: match.passes_accurate ?? 0,
+    passing_accuracy: match.opponent_passing_accuracy ?? (match.opponent_passes ? Math.round(((match.opponent_passes_accurate || 0) / match.opponent_passes) * 100) : 0),
+    opponent_passing_accuracy: match.passing_accuracy ?? 0,
+
+    // Swap Tactical Indices
+    ppda: match.opponent_ppda ?? 0,
+    opponent_ppda: match.ppda ?? 0,
+    match_tempo: match.opponent_match_tempo ?? 0,
+    opponent_match_tempo: match.match_tempo ?? 0,
+    avg_passes_per_possession: match.opponent_avg_passes_per_possession ?? 0,
+    opponent_avg_passes_per_possession: match.avg_passes_per_possession ?? 0,
+    long_pass_pct: match.opponent_long_pass_pct ?? 0,
+    opponent_long_pass_pct: match.long_pass_pct ?? 0,
+    avg_shot_distance: match.opponent_avg_shot_distance ?? 0,
+    opponent_avg_shot_distance: match.avg_shot_distance ?? 0,
+    avg_pass_length: match.opponent_avg_pass_length ?? 0,
+    opponent_avg_pass_length: match.avg_pass_length ?? 0,
+
+    // Swap Set Pieces & Crosses
+    corners: match.corners_against ?? 0,
+    corners_against: match.corners ?? 0,
+    corners_shots: match.corners_against_shots ?? 0,
+    corners_against_shots: match.corners_shots ?? 0,
+    corners_shots_pct: match.corners_against_shots_pct ?? 0,
+    corners_against_shots_pct: match.corners_shots_pct ?? 0,
+
+    free_kicks: match.free_kicks_against ?? 0,
+    free_kicks_against: match.free_kicks ?? 0,
+    free_kicks_shots: match.free_kicks_against_shots ?? 0,
+    free_kicks_against_shots: match.free_kicks_shots ?? 0,
+    free_kicks_shots_pct: match.free_kicks_against_shots_pct ?? 0,
+    free_kicks_against_shots_pct: match.free_kicks_shots_pct ?? 0,
+
+    crosses: match.crosses_against ?? 0,
+    crosses_against: match.crosses ?? 0,
+    crosses_accurate: match.crosses_against_accurate ?? 0,
+    crosses_against_accurate: match.crosses_accurate ?? 0,
+    crosses_acc_pct: match.crosses_against_acc_pct ?? 0,
+    crosses_against_acc_pct: match.crosses_acc_pct ?? 0,
+  };
+}
+
+// ==========================================
 // WYSCOUT MATCHES & ANALYTICS SERVICE
 // ==========================================
 
 export const wyscoutService = {
+  isSameTeam,
+  normalizeTeamString,
+  swapMatchData,
+
+  swapAndSaveMatch: async (matchId: string, opponentTeamId: string): Promise<WyscoutMatch | null> => {
+    const profileId = dbService.getProfileScope();
+    const storageKey = `fm_p_${profileId}_wyscout_${opponentTeamId}`;
+    const current = getLS<WyscoutMatch[]>(storageKey, []);
+    const idx = current.findIndex(m => m.id === matchId);
+    if (idx === -1) {
+      console.warn("swapAndSaveMatch: match not found in local storage", matchId);
+      return null;
+    }
+
+    const swapped = swapMatchData(current[idx]);
+    current[idx] = swapped;
+    setLS(storageKey, current);
+
+    // Save directly to Supabase Cloud
+    await wyscoutService.saveMatches([swapped]);
+    return swapped;
+  },
   getMatchesByTeam: async (opponentTeamId: string, profileIdOverride?: string): Promise<WyscoutMatch[]> => {
     const profileId = profileIdOverride || dbService.getProfileScope();
     const storageKey = `fm_p_${profileId}_wyscout_${opponentTeamId}`;
@@ -848,7 +1059,6 @@ export const wyscoutService = {
     teamName: string
   ): Promise<{ matches: WyscoutMatch[]; errors: string[]; filesProcessed: number }> => {
     const profileId = dbService.getProfileScope();
-    const normalizedTargetName = teamName.toLowerCase().trim();
     const fixtureMap = new Map<string, Partial<WyscoutMatch>>();
     const errors: string[] = [];
     let filesProcessed = 0;
@@ -903,10 +1113,29 @@ export const wyscoutService = {
         const isIndices = headerStr.includes('ppda') || headerStr.includes('tempo') || headerStr.includes('shot distance');
         const isOverview = headerStr.includes('losses /') || headerStr.includes('recoveries /');
 
-        // Filter rows with actual match dates (YYYY-MM-DD)
-        const matchRows = rawGrid.slice(headerRowIndex + 1).filter((r: any[]) => 
-          r && r.length > 3 && String(r[0] || '').trim().match(/^\d{4}[-/]\d{2}[-/]\d{2}/)
-        );
+        const findCol = (terms: string[], defaultIdx: number): number => {
+          const idx = headerRow.findIndex((c: any) => {
+            const s = String(c || '').toLowerCase().trim();
+            return terms.some(t => s === t || s.includes(t));
+          });
+          return idx >= 0 ? idx : defaultIdx;
+        };
+
+        const cDate = findCol(['date', 'ημερομηνία', 'ημερομηνια'], 0);
+        const cMatch = findCol(['match', 'αγώνας', 'αγωνας', 'fixture'], 1);
+        const cComp = findCol(['competition', 'tournament', 'διοργάνωση', 'διοργανωση', 'comp'], 2);
+        const cDuration = findCol(['duration', 'διάρκεια', 'διαρκεια'], 3);
+        const cTeam = findCol(['team', 'ομάδα', 'ομαδα', 'team name', 'club'], 4);
+        const cScheme = findCol(['scheme', 'formation', 'σύστημα', 'συστημα', 'διάταξη', 'διαταξη'], 5);
+
+        // Filter rows with actual match dates (YYYY-MM-DD or DD/MM/YYYY or Excel serial)
+        const matchRows = rawGrid.slice(headerRowIndex + 1).filter((r: any[]) => {
+          if (!r || r.length < 3) return false;
+          const dateVal = r[cDate];
+          if (typeof dateVal === 'number' && dateVal > 30000 && dateVal < 60000) return true;
+          const s = String(dateVal || '').trim();
+          return /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|^\d{1,2}[-/.]\d{1,2}[-/.]\d{4}/.test(s);
+        });
 
         if (matchRows.length === 0) {
           errors.push(`Στο αρχείο ${file.name} δεν βρέθηκαν γραμμές αγώνων με ημερομηνία YYYY-MM-DD.`);
@@ -916,35 +1145,69 @@ export const wyscoutService = {
         // Group match rows by Date_Match
         const groups = new Map<string, any[][]>();
         matchRows.forEach(r => {
-          const key = `${String(r[0]).trim()}_${String(r[1] || '').trim()}`;
+          const dateStr = formatExcelDate(r[cDate]);
+          const matchStr = String(r[cMatch] || '').trim();
+          const key = `${dateStr}_${matchStr}`;
           if (!groups.has(key)) groups.set(key, []);
           groups.get(key)!.push(r);
         });
 
         groups.forEach((rows, fKey) => {
-          // Find target row
-          let targetRow = rows.find(r => {
-            const t = String(r[4] || '').toLowerCase();
-            return t.includes(normalizedTargetName) || normalizedTargetName.includes(t);
+          let targetRow: any[] | undefined;
+          let opponentRow: any[] | undefined;
+
+          // 1. Check if any row explicitly represents Opponents
+          const explicitOpponent = rows.find(r => {
+            const t = normalizeTeamString(String(r[cTeam] || ''));
+            return t === 'opponents' || t === 'opponent' || t === 'αντιπαλος' || t === 'αντιπαλοι';
           });
 
-          if (!targetRow) {
-            // If not matching teamName, pick row that isn't Greece/Opponents or fallback to first
-            targetRow = rows.find(r => {
-              const t = String(r[4] || '').toLowerCase();
-              return !t.includes('greece') && !t.includes('opponents');
-            }) || rows[0];
+          if (explicitOpponent && rows.length > 1) {
+            opponentRow = explicitOpponent;
+            targetRow = rows.find(r => r !== explicitOpponent);
+          } else {
+            // 2. Score rows based on match with teamName (target team)
+            const score0 = isSameTeam(teamName, String(rows[0]?.[cTeam] || ''));
+            const score1 = rows[1] ? isSameTeam(teamName, String(rows[1]?.[cTeam] || '')) : false;
+
+            if (score0 && !score1) {
+              targetRow = rows[0];
+              opponentRow = rows[1];
+            } else if (!score0 && score1) {
+              targetRow = rows[1];
+              opponentRow = rows[0];
+            } else {
+              // 3. Fallback: Check match title (e.g. "Greece U17 - Slovakia U17")
+              const matchTitle = String(rows[0]?.[cMatch] || '');
+              const cleanTitle = matchTitle.replace(/\s*\d+\s*[:\-]\s*\d+\s*$/, '').trim();
+              const parts = cleanTitle.split(/\s*-\s*|\s*vs\.?\s*/i);
+              if (parts.length >= 2) {
+                const part0IsTarget = isSameTeam(teamName, parts[0]);
+                const part1IsTarget = isSameTeam(teamName, parts[1]);
+                if (part0IsTarget || part1IsTarget) {
+                  const targetPart = part0IsTarget ? parts[0] : parts[1];
+                  targetRow = rows.find(r => isSameTeam(targetPart, String(r[cTeam] || '')));
+                  opponentRow = rows.find(r => r !== targetRow);
+                }
+              }
+
+              // 4. Default: first row is target, second row is opponent
+              if (!targetRow) {
+                targetRow = rows[0];
+                opponentRow = rows.find(r => r !== targetRow);
+              }
+            }
           }
 
-          const opponentRow = rows.find(r => r !== targetRow);
+          if (!targetRow) return;
 
-          const dateVal = String(targetRow[0]).trim();
-          const matchName = String(targetRow[1]).trim();
-          const competition = String(targetRow[2] || 'Wyscout Match').trim();
-          const duration = Number(targetRow[3] || 90);
-          const rawScheme = String(targetRow[5] || '4-3-3');
+          const dateVal = formatExcelDate(targetRow[cDate]);
+          const matchName = String(targetRow[cMatch] || '').trim();
+          const competition = String(targetRow[cComp] || 'Wyscout Match').trim();
+          const duration = Number(targetRow[cDuration] || 90);
+          const rawScheme = String(targetRow[cScheme] || '4-3-3');
           const scheme = rawScheme.split(' ')[0].trim();
-          const teamAnalyzed = (String(targetRow[4] || teamName || '').trim()) || 'Team Analyzed';
+          const teamAnalyzed = (String(targetRow[cTeam] || teamName || '').trim()) || 'Team Analyzed';
 
           // Check if we already have this match in fixtureMap
           const existing: WyscoutMatch = (fixtureMap.get(fKey) as WyscoutMatch) || {
@@ -985,8 +1248,9 @@ export const wyscoutService = {
           if (scoreMatch) {
             const scoreA = parseInt(scoreMatch[1], 10);
             const scoreB = parseInt(scoreMatch[2], 10);
-            const parts = matchName.replace(scoreMatch[0], '').split(/\s+-\s+/);
-            const isTeamA = parts[0] ? teamAnalyzed.toLowerCase().includes(parts[0].trim().toLowerCase()) : true;
+            const cleanTitle = matchName.replace(scoreMatch[0], '').trim();
+            const parts = cleanTitle.split(/\s*-\s*|\s*vs\.?\s*/i);
+            const isTeamA = parts[0] ? isSameTeam(teamAnalyzed, parts[0]) : true;
             if (existing.goals === undefined || existing.goals === 0) {
               existing.goals = isTeamA ? scoreA : scoreB;
             }
@@ -996,7 +1260,26 @@ export const wyscoutService = {
           }
 
           if (opponentRow) {
-            existing.opponent_team_name = String(opponentRow[4] || '').trim();
+            const rawOppName = String(opponentRow[cTeam] || '').trim();
+            const normOpp = normalizeTeamString(rawOppName);
+            if (!rawOppName || ['opponents', 'opponent', 'αντιπαλος', 'αντιπαλοι'].includes(normOpp)) {
+              // Extract opponent name from match title
+              const cleanTitle = matchName.replace(/\s*\d+\s*[:\-]\s*\d+\s*$/, '').trim();
+              const parts = cleanTitle.split(/\s*-\s*|\s*vs\.?\s*/i);
+              if (parts.length >= 2) {
+                existing.opponent_team_name = isSameTeam(teamAnalyzed, parts[0]) ? parts[1].trim() : parts[0].trim();
+              } else {
+                existing.opponent_team_name = 'Opponent';
+              }
+            } else {
+              existing.opponent_team_name = rawOppName;
+            }
+          } else {
+            const cleanTitle = matchName.replace(/\s*\d+\s*[:\-]\s*\d+\s*$/, '').trim();
+            const parts = cleanTitle.split(/\s*-\s*|\s*vs\.?\s*/i);
+            if (parts.length >= 2) {
+              existing.opponent_team_name = isSameTeam(teamAnalyzed, parts[0]) ? parts[1].trim() : parts[0].trim();
+            }
           }
 
           // Category-specific mapping
