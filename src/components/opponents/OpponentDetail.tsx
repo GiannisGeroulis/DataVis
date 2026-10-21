@@ -3,7 +3,6 @@ import { OpponentTeam, WyscoutMatch } from '../../types';
 import { wyscoutService } from '../../lib/supabase';
 import { 
   ArrowLeft, 
-  ArrowLeftRight,
   Upload, 
   FileSpreadsheet, 
   BarChart3, 
@@ -148,60 +147,6 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
         setSelectedMatchId('all');
       }
     }
-  };
-
-  const [swapLoading, setSwapLoading] = useState(false);
-
-  const handleSwapSelectedMatch = async () => {
-    if (!selectedMatch) return;
-    setSwapLoading(true);
-    try {
-      const swapped = await wyscoutService.swapAndSaveMatch(selectedMatch.id, team.id);
-      if (swapped) {
-        await loadMatches();
-        setUploadFeedback({
-          type: 'success',
-          message: `Η ομάδα και ο αντίπαλος αντιστράφηκαν επιτυχώς για τον αγώνα "${swapped.match_name}"! Όλα τα στατιστικά, xG, κατοχή, γκολ και πάσες ανανεώθηκαν και αποθηκεύτηκαν στο Supabase Cloud.`
-        });
-      }
-    } catch (err: any) {
-      setUploadFeedback({
-        type: 'error',
-        message: `Σφάλμα κατά την αντιστροφή του αγώνα: ${err.message || err}`
-      });
-    } finally {
-      setSwapLoading(false);
-    }
-  };
-
-  const handleSwapMatch = async (e: React.MouseEvent, match: WyscoutMatch) => {
-    e.stopPropagation();
-    setSwapLoading(true);
-    try {
-      const swapped = await wyscoutService.swapAndSaveMatch(match.id, team.id);
-      if (swapped) {
-        await loadMatches();
-        setUploadFeedback({
-          type: 'success',
-          message: `Αντιστράφηκαν τα στατιστικά για τον αγώνα "${swapped.match_name}".`
-        });
-      }
-    } catch (err: any) {
-      setUploadFeedback({
-        type: 'error',
-        message: `Σφάλμα κατά την αντιστροφή: ${err.message || err}`
-      });
-    } finally {
-      setSwapLoading(false);
-    }
-  };
-
-  const handleSwapPreviewMatch = (index: number) => {
-    setPreviewMatches(prev => {
-      const copy = [...prev];
-      copy[index] = wyscoutService.swapMatchData(copy[index]);
-      return copy;
-    });
   };
 
   // Selected Match object
@@ -1146,25 +1091,13 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-start md:self-center flex-shrink-0 flex-wrap">
-                    <button
-                      onClick={handleSwapSelectedMatch}
-                      disabled={swapLoading}
-                      className="px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs font-bold text-amber-300 hover:text-amber-200 transition flex items-center gap-1.5 shadow-sm"
-                      title="Αντιστροφή Ομάδας ↔ Αντιπάλου: Εναλλαγή στατιστικών, xG, κατοχής, γκολ εάν εισήχθησαν ανάποδα"
-                    >
-                      <ArrowLeftRight className={`h-3.5 w-3.5 ${swapLoading ? 'animate-spin' : ''}`} />
-                      <span>{swapLoading ? 'Αντιστροφή...' : '⇄ Αντιστροφή Ομάδας / Αντιπάλου'}</span>
-                    </button>
-
-                    <button
-                      onClick={() => setSelectedMatchId('all')}
-                      className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-border text-xs font-bold text-zinc-200 hover:text-white transition flex items-center gap-1.5"
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" />
-                      <span>Επιστροφή σε Συγκεντρωτικά</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setSelectedMatchId('all')}
+                    className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-border text-xs font-bold text-zinc-200 hover:text-white transition flex items-center gap-1.5 self-start md:self-center flex-shrink-0"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    <span>Επιστροφή σε Συγκεντρωτικά Στοιχεία</span>
+                  </button>
                 </div>
               )}
 
@@ -2780,15 +2713,6 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                       <div className="flex items-center gap-2 pl-2">
                         <button
                           type="button"
-                          onClick={(e) => handleSwapMatch(e, match)}
-                          disabled={swapLoading}
-                          className="p-1.5 rounded-lg text-zinc-500 hover:text-amber-400 hover:bg-amber-400/10 transition"
-                          title="Αντιστροφή Ομάδας ↔ Αντιπάλου (Swap)"
-                        >
-                          <ArrowLeftRight className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
                           onClick={(e) => handleDeleteMatch(e, match.id)}
                           className="p-1.5 rounded-lg text-zinc-500 hover:text-destructive hover:bg-destructive/10 transition"
                           title="Διαγραφή αγώνα"
@@ -2915,15 +2839,6 @@ export default function OpponentDetail({ team, onBack }: OpponentDetailProps) {
                         <span className="text-[9px] text-zinc-400 uppercase block">Κατοχή</span>
                         <span className="font-bold text-cyan-400">{m.possession}%</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSwapPreviewMatch(idx)}
-                        className="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-amber-500/20 text-zinc-400 hover:text-amber-300 border border-border hover:border-amber-500/30 transition flex items-center gap-1 text-[10px] font-bold"
-                        title="Αντιστροφή Ομάδας / Αντιπάλου για αυτόν τον αγώνα"
-                      >
-                        <ArrowLeftRight className="h-3 w-3" />
-                        <span className="hidden sm:inline">Αντιστροφή</span>
-                      </button>
                     </div>
                   </div>
                 ))}
